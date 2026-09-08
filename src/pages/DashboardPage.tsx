@@ -1,327 +1,234 @@
 import React from 'react';
-import { 
-  Users, 
-  UserCheck, 
-  UserX, 
-  AlertTriangle, 
-  Castle, 
-  Activity, 
-  Sparkles, 
-  ArrowRight,
-  ShieldAlert
-} from 'lucide-react';
 import { useBureau } from '../context/BureauContext';
-import { Badge } from '../components/common/Badge';
 import { DeadlineBadge } from '../components/common/DeadlineBadge';
 import { ScoreBadge } from '../components/common/ScoreBadge';
+import { Badge } from '../components/common/Badge';
 
 export const DashboardPage: React.FC = () => {
-  const { state, stats, selectGhost, setView, runAutoAllocation } = useBureau();
+  const { state, stats, selectGhost, runAutoAllocation } = useBureau();
 
-  // Отбираем проблемные и приоритетные заявки (дедлайн < 24ч, просрочено, невозможно или не расселено)
-  const priorityGhosts = state.ghosts
-    .filter(g => g.deadlineHoursLeft <= 24 || g.status === 'impossible' || g.status === 'needs_attention')
+  // Приоритетная очередь: дедлайн < 24ч, просрочено, невозможно или не расселено
+  const attentionGhosts = state.ghosts
+    .filter(g => g.deadlineHoursLeft <= 24 || g.status === 'impossible' || !g.assignedPlaceId)
     .sort((a, b) => a.deadlineHoursLeft - b.deadlineHoursLeft);
 
-  const kpis = [
-    {
-      label: 'Всего заявок',
-      value: stats.totalGhosts,
-      subtext: 'В реестре бюро',
-      icon: Users,
-      color: 'text-indigo-400',
-      bgColor: 'bg-indigo-950/40',
-      borderColor: 'border-indigo-800/40'
-    },
-    {
-      label: 'Расселено',
-      value: `${stats.relocatedCount}`,
-      subtext: `${stats.relocatedAutoCount} авто / ${stats.relocatedManualCount} вручную`,
-      icon: UserCheck,
-      color: 'text-emerald-400',
-      bgColor: 'bg-emerald-950/40',
-      borderColor: 'border-emerald-800/40'
-    },
-    {
-      label: 'Без места',
-      value: stats.unassignedCount,
-      subtext: `Из них ${stats.impossibleCount} невозможно`,
-      icon: UserX,
-      color: 'text-slate-400',
-      bgColor: 'bg-slate-900/60',
-      borderColor: 'border-slate-800'
-    },
-    {
-      label: 'Требуют внимания',
-      value: stats.needsAttentionCount,
-      subtext: 'Срочные и спорные',
-      icon: AlertTriangle,
-      color: 'text-amber-400',
-      bgColor: 'bg-amber-950/40',
-      borderColor: 'border-amber-800/40',
-      highlight: stats.needsAttentionCount > 0
-    },
-    {
-      label: 'Доступных мест',
-      value: stats.availableSlots,
-      subtext: `Из ${stats.totalCapacity} общих слотов`,
-      icon: Castle,
-      color: 'text-sky-400',
-      bgColor: 'bg-sky-950/40',
-      borderColor: 'border-sky-800/40'
-    },
-    {
-      label: 'Загруженность мест',
-      value: `${stats.occupancyPercent}%`,
-      subtext: `Занято ${stats.totalOccupied} слотов`,
-      icon: Activity,
-      color: 'text-violet-400',
-      bgColor: 'bg-violet-950/40',
-      borderColor: 'border-violet-800/40'
-    }
-  ];
-
   return (
-    <div className="space-y-6">
-      {/* Quick Action Banner */}
-      <div className="bg-gradient-to-r from-indigo-950/60 via-slate-900 to-slate-900 border border-indigo-800/50 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              Диспетчерский пульт
-            </span>
-            <span className="text-xs text-slate-400">
-              Средний скор совместимости по бюро: <strong className="text-slate-200">{stats.averageScore}/100</strong>
-            </span>
-          </div>
-          <h3 className="text-base font-semibold text-slate-100">
-            Оптимизация расселения потока привидений
-          </h3>
-          <p className="text-xs text-slate-400 max-w-2xl">
-            Алгоритм автоматически балансирует мягкие предпочтения и жесткие ограничения с учетом дедлайнов и емкости локаций.
+    <div className="space-y-8">
+      {/* 1. Header with Clear Subheader & Primary Action */}
+      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 border-b border-[#202326] pb-6">
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-100 tracking-tight">Обзор бюро</h2>
+          <p className="text-xs text-zinc-400 mt-1 font-mono">
+            {stats.totalGhosts} заявок · {stats.relocatedCount} расселено · {stats.needsAttentionCount} требуют решения
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div>
           <button
             onClick={runAutoAllocation}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-950/50 transition-colors"
+            className="px-4 py-2 bg-zinc-100 hover:bg-white text-zinc-900 rounded-md text-xs font-semibold shadow-sm transition-colors"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Запустить авто-подбор</span>
+            Запустить авто-подбор
           </button>
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
-        {kpis.map((kpi, idx) => {
-          const Icon = kpi.icon;
-          return (
-            <div
-              key={idx}
-              className={`p-4 rounded-xl border bg-slate-900/80 transition-all ${kpi.borderColor} ${
-                kpi.highlight ? 'ring-1 ring-amber-500/30' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-400 font-medium line-clamp-1">{kpi.label}</span>
-                <div className={`p-1.5 rounded-lg ${kpi.bgColor} ${kpi.color}`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="text-2xl font-bold text-slate-100 font-mono tracking-tight">
-                {kpi.value}
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">{kpi.subtext}</p>
-            </div>
-          );
-        })}
+      {/* 2. Typographic Minimalist KPIs (No big icon boxes, pure whitespace & numbers) */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-6 py-2 border-b border-[#202326]">
+        <div>
+          <div className="text-2xl font-bold font-mono text-zinc-100">{stats.totalGhosts}</div>
+          <div className="text-xs text-zinc-500 mt-0.5">Заявок</div>
+        </div>
+        <div>
+          <div className="text-2xl font-bold font-mono text-emerald-400">{stats.relocatedCount}</div>
+          <div className="text-xs text-zinc-500 mt-0.5">Расселено</div>
+        </div>
+        <div>
+          <div className="text-2xl font-bold font-mono text-zinc-400">{stats.unassignedCount}</div>
+          <div className="text-xs text-zinc-500 mt-0.5">Без места</div>
+        </div>
+        <div>
+          <div className={`text-2xl font-bold font-mono ${stats.needsAttentionCount > 0 ? 'text-amber-400' : 'text-zinc-500'}`}>
+            {stats.needsAttentionCount}
+          </div>
+          <div className="text-xs text-zinc-500 mt-0.5">Требуют внимания</div>
+        </div>
+        <div>
+          <div className="text-2xl font-bold font-mono text-zinc-300">{stats.availableSlots}</div>
+          <div className="text-xs text-zinc-500 mt-0.5">Свободных мест</div>
+        </div>
+        <div>
+          <div className="text-2xl font-bold font-mono text-zinc-300">{stats.occupancyPercent}%</div>
+          <div className="text-xs text-zinc-500 mt-0.5">Загрузка мест</div>
+        </div>
       </div>
 
-      {/* Two Column Layout: Priority Queue & Place Occupancy */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Priority Applications (7 cols) */}
-        <div className="lg:col-span-7 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-amber-400" />
-              <h3 className="text-sm font-semibold text-slate-200">
-                Приоритетные заявки (требуют внимания)
-              </h3>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
-                {priorityGhosts.length}
-              </span>
-            </div>
-            <button
-              onClick={() => setView('applications')}
-              className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium transition-colors"
-            >
-              <span>Все заявки</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+      {/* 3. SECTION 1 (MAIN): Требуют внимания */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-zinc-200">Требуют внимания</h3>
+            <span className="text-xs font-mono text-zinc-500">({attentionGhosts.length})</span>
           </div>
-
-          <div className="space-y-2.5">
-            {priorityGhosts.length === 0 ? (
-              <div className="p-8 text-center bg-slate-900/40 border border-slate-800 rounded-2xl text-slate-400 text-xs">
-                Все срочные заявки успешно распределены и не требуют оперативного вмешательства.
-              </div>
-            ) : (
-              priorityGhosts.map(ghost => {
-                const result = state.allocation.ghostResults[ghost.id];
-                const place = ghost.assignedPlaceId
-                  ? state.places.find(p => p.id === ghost.assignedPlaceId)
-                  : result?.recommendedPlaceId
-                  ? state.places.find(p => p.id === result.recommendedPlaceId)
-                  : null;
-
-                let problemDescription = '';
-                if (ghost.deadlineHoursLeft < 0) {
-                  problemDescription = `Дедлайн просрочен на ${Math.abs(ghost.deadlineHoursLeft)} ч.! Срочно требуется ручное решение.`;
-                } else if (result?.status === 'impossible') {
-                  problemDescription = result.impossibleReasons?.[0] || 'Невозможно подобрать место из-за конфликта ограничений.';
-                } else if (ghost.deadlineHoursLeft <= 24) {
-                  problemDescription = `Критический дедлайн (<${ghost.deadlineHoursLeft} ч.). Требуется подтверждение назначения.`;
-                } else {
-                  problemDescription = 'Высокая тревожность привидения требует проверки локации.';
-                }
-
-                return (
-                  <div
-                    key={ghost.id}
-                    className="p-4 bg-slate-900/70 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl transition-all space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-100 text-sm">{ghost.name}</span>
-                          <Badge
-                            variant={
-                              ghost.anxietyLevel === 'high'
-                                ? 'danger'
-                                : ghost.anxietyLevel === 'medium'
-                                ? 'warning'
-                                : 'success'
-                            }
-                            size="sm"
-                          >
-                            {ghost.anxietyLevel === 'high'
-                              ? 'Высокая тревожность'
-                              : ghost.anxietyLevel === 'medium'
-                              ? 'Средняя тревожность'
-                              : 'Низкая тревожность'}
-                          </Badge>
-                          <DeadlineBadge hoursLeft={ghost.deadlineHoursLeft} />
-                        </div>
-                        <p className="text-xs text-amber-300/90 font-medium">
-                          ⚠ {problemDescription}
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={() => selectGhost(ghost.id)}
-                        className="px-3 py-1.5 bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-300 rounded-lg text-xs font-medium border border-slate-700 hover:border-transparent transition-all shrink-0"
-                      >
-                        Разобрать заявку
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-800/70 text-slate-400">
-                      <div>
-                        {place ? (
-                          <span>
-                            {ghost.assignedPlaceId ? 'Заселено в:' : 'Рекомендовано:'}{' '}
-                            <strong className="text-slate-200 font-semibold">{place.name}</strong>
-                          </span>
-                        ) : (
-                          <span className="text-rose-400">Место не назначено</span>
-                        )}
-                      </div>
-                      {result?.evaluations && place && (
-                        <ScoreBadge
-                          score={result.evaluations[place.id]?.score || 0}
-                          isEligible={result.evaluations[place.id]?.isEligible}
-                          size="sm"
-                        />
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <span className="text-xs text-zinc-500">Приоритетная очередь оператора</span>
         </div>
 
-        {/* Right Column: Places Occupancy Monitoring (5 cols) */}
-        <div className="lg:col-span-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Castle className="w-4 h-4 text-sky-400" />
-              <h3 className="text-sm font-semibold text-slate-200">
-                Загруженность мест обитания
-              </h3>
+        <div className="border border-[#202326] rounded-lg overflow-hidden bg-[#111214]">
+          {attentionGhosts.length === 0 ? (
+            <div className="p-8 text-center text-xs text-zinc-500">
+              В очереди нет критических заявок. Все привидения расселены.
             </div>
-            <button
-              onClick={() => setView('places')}
-              className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium transition-colors"
-            >
-              <span>Все места</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          ) : (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-[#202326] text-zinc-500 font-medium">
+                  <th className="py-2.5 px-4 font-normal">Привидение</th>
+                  <th className="py-2.5 px-4 font-normal">Причина внимания</th>
+                  <th className="py-2.5 px-4 font-normal">Дедлайн</th>
+                  <th className="py-2.5 px-4 font-normal">Рекомендованное место</th>
+                  <th className="py-2.5 px-4 font-normal">Скор</th>
+                  <th className="py-2.5 px-4 font-normal text-right">Действие</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#1b1d20]">
+                {attentionGhosts.map(ghost => {
+                  const result = state.allocation.ghostResults[ghost.id];
+                  const place = ghost.assignedPlaceId
+                    ? state.places.find(p => p.id === ghost.assignedPlaceId)
+                    : result?.recommendedPlaceId
+                    ? state.places.find(p => p.id === result.recommendedPlaceId)
+                    : null;
 
-          <div className="space-y-2.5">
-            {state.places.map(place => {
-              const occupants = state.allocation.placeOccupants[place.id] || [];
-              const percent = Math.round((occupants.length / place.capacity) * 100);
-              const isFull = occupants.length >= place.capacity;
+                  let reasonText = '';
+                  if (ghost.deadlineHoursLeft < 0) {
+                    reasonText = `Дедлайн просрочен (${Math.abs(ghost.deadlineHoursLeft)}ч)`;
+                  } else if (result?.status === 'impossible') {
+                    reasonText = result.impossibleReasons?.[0] || 'Невозможно подобрать место';
+                  } else if (ghost.deadlineHoursLeft <= 24) {
+                    reasonText = 'Истекает срок переселения (<24ч)';
+                  } else {
+                    reasonText = 'Высокая тревожность, ожидает проверки';
+                  }
 
-              let barColor = 'bg-emerald-500';
-              if (percent > 85) barColor = 'bg-rose-500';
-              else if (percent > 50) barColor = 'bg-amber-500';
+                  const evalScore = place && result?.evaluations ? result.evaluations[place.id]?.score : undefined;
+                  const isEligible = place && result?.evaluations ? result.evaluations[place.id]?.isEligible : false;
 
-              return (
-                <div
-                  key={place.id}
-                  className="p-3.5 bg-slate-900/70 border border-slate-800 rounded-xl space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-semibold text-slate-200 text-xs">{place.name}</span>
-                      <span className="text-[11px] text-slate-400 ml-2">({place.type})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-semibold text-slate-300">
-                        {occupants.length} / {place.capacity}
-                      </span>
+                  return (
+                    <tr
+                      key={ghost.id}
+                      onClick={() => selectGhost(ghost.id)}
+                      className="hover:bg-[#16181b] cursor-pointer transition-colors"
+                    >
+                      <td className="py-3 px-4 font-medium text-zinc-200">
+                        {ghost.name}
+                        <span className="text-[11px] text-zinc-500 ml-1.5 font-normal">#{ghost.id}</span>
+                      </td>
+                      <td className="py-3 px-4 text-zinc-400">
+                        <span className={ghost.deadlineHoursLeft < 0 ? 'text-rose-400' : 'text-zinc-300'}>
+                          {reasonText}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <DeadlineBadge hoursLeft={ghost.deadlineHoursLeft} />
+                      </td>
+                      <td className="py-3 px-4 text-zinc-300">
+                        {place ? place.name : <span className="text-zinc-500">Нет доступных</span>}
+                      </td>
+                      <td className="py-3 px-4">
+                        {evalScore !== undefined ? (
+                          <ScoreBadge score={evalScore} isEligible={isEligible} size="sm" />
+                        ) : (
+                          <span className="text-zinc-600">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            selectGhost(ghost.id);
+                          }}
+                          className="px-2.5 py-1 text-xs font-medium text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+                        >
+                          Разобрать
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* 4. SECTION 2: Загрузка мест (Компактная таблица) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-zinc-200">Загрузка мест обитания</h3>
+          <span className="text-xs text-zinc-500 font-mono">
+            Занято {stats.totalOccupied} из {stats.totalCapacity} слотов
+          </span>
+        </div>
+
+        <div className="border border-[#202326] rounded-lg overflow-hidden bg-[#111214]">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[#202326] text-zinc-500 font-medium">
+                <th className="py-2.5 px-4 font-normal">Место</th>
+                <th className="py-2.5 px-4 font-normal">Тип</th>
+                <th className="py-2.5 px-4 font-normal">Занято</th>
+                <th className="py-2.5 px-4 font-normal">Свободно</th>
+                <th className="py-2.5 px-4 font-normal">Шкала</th>
+                <th className="py-2.5 px-4 font-normal text-right">Статус</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1b1d20]">
+              {state.places.map(place => {
+                const occupants = state.allocation.placeOccupants[place.id] || [];
+                const freeSlots = Math.max(0, place.capacity - occupants.length);
+                const percent = Math.round((occupants.length / place.capacity) * 100);
+                const isFull = freeSlots === 0;
+
+                return (
+                  <tr key={place.id} className="hover:bg-[#16181b] transition-colors">
+                    <td className="py-2.5 px-4 font-medium text-zinc-200">{place.name}</td>
+                    <td className="py-2.5 px-4 text-zinc-400">{place.type}</td>
+                    <td className="py-2.5 px-4 font-mono text-zinc-300">{occupants.length}</td>
+                    <td className="py-2.5 px-4 font-mono text-zinc-300">{freeSlots}</td>
+                    <td className="py-2.5 px-4 w-40">
+                      <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            isFull ? 'bg-rose-500' : percent > 50 ? 'bg-amber-400' : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-4 text-right">
                       {isFull ? (
-                        <Badge variant="danger" size="sm">
-                          Заполнено
-                        </Badge>
+                        <Badge variant="danger" size="sm">Заполнено</Badge>
                       ) : percent > 0 ? (
-                        <Badge variant="warning" size="sm">
-                          Частично
-                        </Badge>
+                        <Badge variant="warning" size="sm">Частично</Badge>
                       ) : (
-                        <Badge variant="success" size="sm">
-                          Свободно
-                        </Badge>
+                        <Badge variant="success" size="sm">Свободно</Badge>
                       )}
-                    </div>
-                  </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-                  {/* Visual progress bar */}
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {/* 5. SECTION 3: Второстепенная аналитика */}
+      <div className="pt-2 border-t border-[#202326] flex flex-wrap items-center justify-between text-xs text-zinc-500">
+        <div>
+          Средняя совместимость решений: <strong className="text-zinc-300 font-mono">{stats.averageScore}/100</strong>
+        </div>
+        <div>
+          Назначения: <span className="text-zinc-300">{stats.relocatedAutoCount} авто</span> · <span className="text-zinc-300">{stats.relocatedManualCount} вручную</span>
         </div>
       </div>
     </div>

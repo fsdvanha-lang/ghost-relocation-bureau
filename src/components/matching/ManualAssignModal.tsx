@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, AlertTriangle, Check, AlertCircle, ShieldAlert } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
 import type { GhostApplication } from '../../types/ghost';
 import type { RelocationPlace } from '../../types/place';
 import type { PlaceMatchEvaluation } from '../../types/matching';
@@ -26,12 +26,11 @@ export const ManualAssignModal: React.FC<ManualAssignModalProps> = ({
   onConfirmAssign
 }) => {
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-  const [showConfirmConflict, setShowConfirmConflict] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
 
   if (!isOpen) return null;
 
-  // Сортируем места: сначала без hard conflicts по score, затем остальные
+  // Сортировка: сначала подходящие по скору, затем остальные
   const sortedPlaces = [...places].sort((a, b) => {
     const evalA = evaluations[a.id];
     const evalB = evaluations[b.id];
@@ -40,34 +39,6 @@ export const ManualAssignModal: React.FC<ManualAssignModalProps> = ({
     return (evalB?.score || 0) - (evalA?.score || 0);
   });
 
-  const handleSelectPlace = (placeId: string) => {
-    const evaluation = evaluations[placeId];
-    const place = places.find(p => p.id === placeId);
-    const occupants = placeOccupants[placeId] || [];
-    const isOverCapacity = occupants.length >= (place?.capacity || 0);
-
-    // Если есть конфликты или переполнение — показываем диалог подтверждения
-    if (!evaluation?.isEligible || isOverCapacity || evaluation.score < 60) {
-      setSelectedPlaceId(placeId);
-      setShowConfirmConflict(true);
-    } else {
-      // Идеальное или нормальное место — назначаем напрямую
-      onConfirmAssign(ghost.id, placeId, 'Ручное назначение оператора');
-      onClose();
-    }
-  };
-
-  const handleConfirmOverride = () => {
-    if (!selectedPlaceId) return;
-    onConfirmAssign(
-      ghost.id,
-      selectedPlaceId,
-      overrideReason || 'Подтвержденный оператором ручной оверрайд с конфликтами'
-    );
-    setShowConfirmConflict(false);
-    onClose();
-  };
-
   const activeConflictingPlace = selectedPlaceId ? places.find(p => p.id === selectedPlaceId) : null;
   const activeConflictEvaluation = selectedPlaceId ? evaluations[selectedPlaceId] : null;
   const activeOccupants = selectedPlaceId ? placeOccupants[selectedPlaceId] || [] : [];
@@ -75,211 +46,193 @@ export const ManualAssignModal: React.FC<ManualAssignModalProps> = ({
     ? activeOccupants.length >= activeConflictingPlace.capacity
     : false;
 
+  const handleSelectPlace = (placeId: string) => {
+    const evaluation = evaluations[placeId];
+    const place = places.find(p => p.id === placeId);
+    const occupants = placeOccupants[placeId] || [];
+    const isOverCapacity = occupants.length >= (place?.capacity || 0);
+
+    if (!evaluation?.isEligible || isOverCapacity || evaluation.score < 60) {
+      // Требуется подтверждение оверрайда
+      setSelectedPlaceId(placeId);
+    } else {
+      // Идеальное или допустимое место — назначаем сразу
+      onConfirmAssign(ghost.id, placeId, 'Ручное назначение оператора');
+      onClose();
+    }
+  };
+
+  const handleConfirmConflict = () => {
+    if (!selectedPlaceId) return;
+    onConfirmAssign(
+      ghost.id,
+      selectedPlaceId,
+      overrideReason || 'Подтвержденный оператором ручной оверрайд с конфликтами'
+    );
+    setSelectedPlaceId(null);
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      {/* Main Relocation Picker Modal */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        {/* Modal Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+      <div className="bg-[#111214] border border-[#26292d] rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-[#202326] flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
-              <span>Ручное расселение привидения:</span>
-              <span className="text-indigo-400 font-bold">{ghost.name}</span>
+            <h3 className="text-sm font-semibold text-zinc-100">
+              Ручное назначение: <span className="text-zinc-300">{ghost.name}</span>
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Выберите место из доступного пула бюро. При наличии конфликтов потребуется подтверждение.
+            <p className="text-[11px] text-zinc-400 mt-0.5">
+              Выберите место обитания из списка доступных локаций бюро
             </p>
           </div>
           <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            onClick={() => {
+              setSelectedPlaceId(null);
+              onClose();
+            }}
+            className="p-1 text-zinc-400 hover:text-zinc-200 rounded"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Places List */}
-        <div className="p-5 overflow-y-auto space-y-3 flex-1">
-          {sortedPlaces.map(place => {
-            const evaluation = evaluations[place.id];
-            const occupants = placeOccupants[place.id] || [];
-            const isCurrentlyAssigned = ghost.assignedPlaceId === place.id;
-            const freeSlots = Math.max(0, place.capacity - occupants.length);
-            const isFull = freeSlots === 0;
-
-            return (
-              <div
-                key={place.id}
-                className={`p-4 rounded-xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                  isCurrentlyAssigned
-                    ? 'bg-indigo-950/30 border-indigo-500/60 shadow-lg shadow-indigo-950/30'
-                    : evaluation?.isEligible
-                    ? 'bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-800/40'
-                    : 'bg-slate-900/40 border-slate-800/60 opacity-90'
-                }`}
-              >
-                {/* Place details */}
-                <div className="space-y-1.5 flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-slate-100 text-sm">{place.name}</span>
-                    <Badge variant="default" size="sm">
-                      {place.type}
-                    </Badge>
-                    {isCurrentlyAssigned && (
-                      <Badge variant="purple" size="sm">
-                        Текущее место
-                      </Badge>
-                    )}
-                    {isFull && (
-                      <Badge variant="danger" size="sm">
-                        Заполнено ({occupants.length}/{place.capacity})
-                      </Badge>
-                    )}
-                    {!isFull && (
-                      <Badge variant="success" size="sm">
-                        Свободно: {freeSlots} из {place.capacity}
-                      </Badge>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-slate-400 line-clamp-1">{place.description}</p>
-
-                  {/* Highlights / Conflicts */}
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs">
-                    {evaluation?.hardConflicts && evaluation.hardConflicts.length > 0 && (
-                      <span className="text-rose-400 flex items-center gap-1 font-medium">
-                        <AlertCircle className="w-3.5 h-3.5" />
-                        <span>Конфликты: {evaluation.hardConflicts.length}</span>
-                      </span>
-                    )}
-                    {evaluation?.pros && evaluation.pros.length > 0 && (
-                      <span className="text-emerald-400 flex items-center gap-1">
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Плюсы: {evaluation.pros.length}</span>
-                      </span>
-                    )}
-                    {evaluation?.warnings && evaluation.warnings.length > 0 && (
-                      <span className="text-amber-400 flex items-center gap-1">
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        <span>Предупреждения: {evaluation.warnings.length}</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Score and action */}
-                <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
-                  <ScoreBadge
-                    score={evaluation?.score || 0}
-                    isEligible={evaluation?.isEligible ?? false}
-                    size="md"
-                  />
-
-                  <button
-                    onClick={() => handleSelectPlace(place.id)}
-                    disabled={isCurrentlyAssigned}
-                    className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                      isCurrentlyAssigned
-                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                        : evaluation?.isEligible && !isFull
-                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-950/40'
-                        : 'bg-slate-800 hover:bg-amber-600 hover:text-white text-slate-300 border border-slate-700'
-                    }`}
-                  >
-                    <span>{isCurrentlyAssigned ? 'Уже назначено' : 'Выбрать'}</span>
-                  </button>
-                </div>
+        {/* Confirmation State if a conflicting place is clicked */}
+        {selectedPlaceId && activeConflictingPlace ? (
+          <div className="p-6 space-y-4 overflow-y-auto">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg space-y-1.5">
+              <div className="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4" />
+                <span>Обнаружены конфликты при выборе «{activeConflictingPlace.name}»</span>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 bg-slate-900 border-t border-slate-800 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition-colors"
-          >
-            Закрыть
-          </button>
-        </div>
-      </div>
-
-      {/* Confirmation Warning Modal for Conflicting Selection */}
-      {showConfirmConflict && activeConflictingPlace && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-fadeIn">
-          <div className="bg-slate-900 border border-amber-800/80 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-xl bg-amber-950/80 border border-amber-800/80 text-amber-400 shrink-0">
-                <ShieldAlert className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="text-base font-semibold text-slate-100">
-                  Вы выбрали место с конфликтами условий!
-                </h4>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Назначение привидения <strong className="text-slate-200">{ghost.name}</strong> в{' '}
-                  <strong className="text-slate-200">«{activeConflictingPlace.name}»</strong> нарушает правила безопасности:
-                </p>
-              </div>
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                Выбранное место нарушает физические ограничения или исчерпало базовую вместимость:
+              </p>
             </div>
 
             {/* List of conflicts */}
-            <div className="space-y-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+            <div className="space-y-1.5 text-xs">
               {isSelectedOverCapacity && (
-                <div className="flex items-start gap-2 text-xs text-rose-300">
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                  <span>Превышение вместимости: место заполнено ({activeOccupants.length}/{activeConflictingPlace.capacity}).</span>
+                <div className="text-rose-400 flex items-start gap-1.5">
+                  <span className="font-bold">✕</span>
+                  <span>Локация полностью заполнена ({activeOccupants.length}/{activeConflictingPlace.capacity}).</span>
                 </div>
               )}
-
               {activeConflictEvaluation?.hardConflicts.map((c, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs text-rose-300">
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <div key={i} className="text-rose-400 flex items-start gap-1.5">
+                  <span className="font-bold">✕</span>
                   <span>{c.message}</span>
                 </div>
               ))}
-
               {activeConflictEvaluation?.warnings.map((w, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs text-amber-300">
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div key={i} className="text-amber-400 flex items-start gap-1.5">
+                  <span className="font-bold">⚠</span>
                   <span>{w.message}</span>
                 </div>
               ))}
             </div>
 
-            {/* Reason input */}
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400 font-medium">
-                Обоснование оператора (причина исключения):
+            {/* Justification input */}
+            <div className="space-y-1 pt-2">
+              <label className="text-[11px] font-medium text-zinc-400">
+                Обоснование исключения (причина ручного решения):
               </label>
               <input
                 type="text"
                 value={overrideReason}
                 onChange={e => setOverrideReason(e.target.value)}
                 placeholder="Например: временное размещение до освобождения склепа"
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-amber-500"
+                className="w-full px-3 py-1.5 bg-[#181a1d] border border-[#2b2f35] rounded text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-400"
               />
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#202326]">
               <button
-                onClick={() => setShowConfirmConflict(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition-colors"
+                onClick={() => setSelectedPlaceId(null)}
+                className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 rounded transition-colors"
               >
-                Отмена
+                Вернуться к списку
               </button>
               <button
-                onClick={handleConfirmOverride}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-amber-950/40 transition-colors"
+                onClick={handleConfirmConflict}
+                className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded transition-colors"
               >
-                Подтвердить ручное назначение
+                Подтвердить выбор с конфликтом
               </button>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          /* Decision Table / List */
+          <div className="overflow-y-auto flex-1">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-[#202326] text-zinc-500 font-medium bg-[#131517]">
+                  <th className="py-2.5 px-4 font-normal">Место</th>
+                  <th className="py-2.5 px-4 font-normal">Свободно</th>
+                  <th className="py-2.5 px-4 font-normal">Score</th>
+                  <th className="py-2.5 px-4 font-normal">Статус</th>
+                  <th className="py-2.5 px-4 font-normal text-right">Выбор</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#1b1d20]">
+                {sortedPlaces.map(place => {
+                  const evaluation = evaluations[place.id];
+                  const occupants = placeOccupants[place.id] || [];
+                  const isCurrent = ghost.assignedPlaceId === place.id;
+                  const freeSlots = Math.max(0, place.capacity - occupants.length);
+                  const isFull = freeSlots === 0;
+                  const hasHardConflict = !evaluation?.isEligible;
+
+                  return (
+                    <tr
+                      key={place.id}
+                      className={`hover:bg-[#16181b] transition-colors ${isCurrent ? 'bg-zinc-800/20' : ''}`}
+                    >
+                      <td className="py-2.5 px-4">
+                        <div className="font-medium text-zinc-200">{place.name}</div>
+                        <div className="text-[11px] text-zinc-500">{place.type}</div>
+                      </td>
+                      <td className="py-2.5 px-4 font-mono text-zinc-300">
+                        {freeSlots} из {place.capacity}
+                      </td>
+                      <td className="py-2.5 px-4">
+                        <ScoreBadge score={evaluation?.score || 0} isEligible={evaluation?.isEligible} size="sm" />
+                      </td>
+                      <td className="py-2.5 px-4">
+                        {isCurrent ? (
+                          <Badge variant="default" size="sm">Текущее</Badge>
+                        ) : hasHardConflict ? (
+                          <span className="text-[11px] text-rose-400">Конфликт условий</span>
+                        ) : isFull ? (
+                          <span className="text-[11px] text-zinc-500">Заполнено</span>
+                        ) : (
+                          <span className="text-[11px] text-emerald-400">Доступно</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-4 text-right">
+                        <button
+                          onClick={() => handleSelectPlace(place.id)}
+                          disabled={isCurrent}
+                          className={`px-3 py-1 text-xs rounded font-medium transition-colors ${
+                            isCurrent
+                              ? 'text-zinc-600 cursor-not-allowed'
+                              : hasHardConflict || isFull
+                              ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'
+                              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+                          }`}
+                        >
+                          {isCurrent ? 'Назначено' : hasHardConflict || isFull ? 'Выбрать (риск)' : 'Выбрать'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

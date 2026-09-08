@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
 import { 
-  Bot, 
-  Clock, 
-  Cpu, 
-  CheckCircle2, 
-  AlertCircle, 
-  Lightbulb, 
   ChevronDown, 
   ChevronRight,
-  Sparkles,
   Save
 } from 'lucide-react';
 
@@ -106,202 +99,170 @@ export const AiWorklogPage: React.FC = () => {
     },
     {
       number: 8,
-      title: '8. Финальная проверка',
-      humanAction: 'Контроль соответствия Definition of Done, аудит интерфейса, проверка объяснимости кода перед собеседованием.',
-      aiAction: 'Провел сквозной функциональный аудит, проверил пересчет аналитики в реальном времени, подготовил документацию в README.md.',
-      keyPrompt: '«Получить не просто работающую демку, а маленький законченный продукт, который выглядит как работа AI-first Developer.»',
-      result: 'Готовый production-ready проект, упакованный для легкого запуска и демонстрации на оценке MOX.'
+      title: '8. Финальная проверка и UI refinement',
+      humanAction: 'Провёл критический дизайн-ревью: убрал неоновый стиль AI-дашборда, card-пролиферацию, восстановил строгую визуальную иерархию и плотные таблицы.',
+      aiAction: 'Переработал дашборд, выделил блок «Требуют внимания» в главный фокус, сжал KPI до типографики, оптимизировал Drawer и таблицы.',
+      keyPrompt: '«Интерфейс уровня современного B2B SaaS/internal operations tool... минималистично, спокойно, функционально.»',
+      result: 'Спокойный, выверенный operations tool оператора уровня Linear/Stripe.'
     }
   ];
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      {/* Header Banner */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-2">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-indigo-950 text-indigo-400 border border-indigo-800/60">
-            <Bot className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-slate-100">
-              AI Worklog: Прозрачный протокол разработки
-            </h3>
-            <p className="text-xs text-slate-400 font-mono">
-              MOX AI-First Developer Assignment • Audit & Reflection Log
-            </p>
-          </div>
-        </div>
-        <p className="text-xs text-slate-300 leading-relaxed pt-2 border-t border-slate-800/80">
-          Данный раздел фиксирует реальное разделение ролей человека и искусственного интеллекта,
-          ключевые архитектурные решения оператора, исправление ошибок модели и векторы дальнейшего развития.
+    <div className="space-y-8 max-w-4xl">
+      {/* Header */}
+      <div className="border-b border-[#202326] pb-4 space-y-1">
+        <h2 className="text-xl font-semibold text-zinc-100 tracking-tight">
+          AI Worklog
+        </h2>
+        <p className="text-xs text-zinc-400 font-mono">
+          Протокол процесса разработки · Роли человека и модели · Принятые решения
         </p>
       </div>
 
-      {/* Meta Parameters Grid: Tools, Time, Tokens */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Meta: Tools, Time, Tokens */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-[#202326] pb-6">
         {/* Tools */}
-        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
-            <Cpu className="w-4 h-4 text-indigo-400" />
-            <span>Инструменты и среда</span>
-          </div>
-          <div className="text-xs text-slate-200 font-medium space-y-1">
-            <p>• <strong>Среда:</strong> Google Antigravity IDE</p>
-            <p>• <strong>Модель:</strong> Gemini 3.8 Flash (High)</p>
-            <p>• <strong>Стек:</strong> React 19, TypeScript, Vite, Tailwind v3, Vitest</p>
-          </div>
+        <div className="space-y-1">
+          <div className="text-xs font-semibold text-zinc-200">Инструменты и среда</div>
+          <p className="text-xs text-zinc-400">
+            Antigravity IDE · Gemini 3.8 Flash (High) · React 19 · TypeScript · Vite · Tailwind v3 · Vitest
+          </p>
         </div>
 
         {/* Development Time */}
-        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
-            <Clock className="w-4 h-4 text-sky-400" />
-            <span>Общее время разработки</span>
-          </div>
-          <p className="text-[11px] text-slate-400">
-            Поле для указания реального времени работы над заданием (без синтетических цифр):
+        <div className="space-y-1.5">
+          <div className="text-xs font-semibold text-zinc-200">Время разработки</div>
+          <p className="text-[11px] text-zinc-500">
+            Поле для указания реального времени работы:
           </p>
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2">
             <input
               type="text"
               value={operatorHours}
               onChange={e => setOperatorHours(e.target.value)}
               placeholder="Например: 2.5 часа"
-              className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-100 flex-1 focus:outline-none focus:border-indigo-500"
+              className="px-2.5 py-1 bg-[#131517] border border-[#26292d] rounded text-xs text-zinc-100 flex-1 focus:outline-none focus:border-zinc-400"
             />
             <button
               onClick={handleSaveHours}
-              className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition-colors"
-              title="Сохранить в локальное состояние"
+              className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded text-xs font-medium transition-colors"
             >
               <Save className="w-3.5 h-3.5" />
             </button>
           </div>
-          {isSaved && <span className="text-[10px] text-emerald-400 font-medium">✓ Время сохранено</span>}
+          {isSaved && <span className="text-[10px] text-emerald-400 font-medium">✓ Сохранено</span>}
         </div>
 
         {/* Tokens */}
-        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>Использованные токены</span>
-          </div>
-          <div className="p-2.5 bg-slate-950/60 rounded-lg border border-slate-800 text-xs text-amber-300/90 font-mono">
+        <div className="space-y-1">
+          <div className="text-xs font-semibold text-zinc-200">Использованные токены</div>
+          <p className="text-xs text-zinc-400 leading-relaxed font-mono">
             Токены не учитывались / статистика недоступна в используемом инструменте
-          </div>
-          <p className="text-[10px] text-slate-500">
-            Синтетические числа не выдумывались согласно принципу честности в ТЗ.
           </p>
         </div>
       </div>
 
-      {/* Operator Independent Decisions (3-5 items) */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-          <Lightbulb className="w-4 h-4 text-amber-400" />
-          <span>Ключевые инженерные решения оператора (Human Decisions)</span>
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-          <div className="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-xs font-semibold text-indigo-300">
+      {/* Operator Independent Decisions */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-zinc-200">
+          Ключевые инженерные решения оператора (Human Decisions)
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="p-4 bg-[#111214] border border-[#202326] rounded-lg space-y-1">
+            <span className="font-semibold text-zinc-200">
               1. Дедлайн вынесен из Hard Constraints в приоритет очереди
             </span>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-zinc-400 leading-relaxed">
               Просроченный дедлайн не должен физически блокировать расселение. Привидение с просроченным сроком должно получить наивысший приоритет в диспетчеризации, а не статус невозможности.
             </p>
           </div>
 
-          <div className="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-xs font-semibold text-indigo-300">
+          <div className="p-4 bg-[#111214] border border-[#202326] rounded-lg space-y-1">
+            <span className="font-semibold text-zinc-200">
               2. 100% отказ от LLM для вычисления скоринга
             </span>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-zinc-400 leading-relaxed">
               Математический подбор реализован детерминированными чистыми функциями на TypeScript. Это гарантирует мгновенный отклик, нулевые затраты на API и стопроцентную повторяемость для тестов.
             </p>
           </div>
 
-          <div className="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-xs font-semibold text-indigo-300">
+          <div className="p-4 bg-[#111214] border border-[#202326] rounded-lg space-y-1">
+            <span className="font-semibold text-zinc-200">
               3. Двухфазное ручное управление (Human-in-the-Loop)
             </span>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Оператору не запрещается выбор неидеальных или конфликтующих мест. Система выводит модальное окно с описанием всех рисков и требует подтверждения с указанием причины исключения.
+            <p className="text-zinc-400 leading-relaxed">
+              Оператору не запрещается выбор неидеальных мест. Система перехватывает риски понятным предупреждающим диалогом и требует осознанного подтверждения с указанием причины.
             </p>
           </div>
 
-          <div className="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-xs font-semibold text-indigo-300">
+          <div className="p-4 bg-[#111214] border border-[#202326] rounded-lg space-y-1">
+            <span className="font-semibold text-zinc-200">
               4. Разрешение конкуренции за слоты с фиксацией вытеснения
             </span>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              При нехватке мест у популярной локации слот отдается более срочной заявке, а уступленная заявка получает 2-е по качеству место с понятным объяснением причины смещения.
+            <p className="text-zinc-400 leading-relaxed">
+              При нехватке мест слот отдается более срочной заявке, а уступленная заявка получает 2-е по качеству место с понятным объяснением причины смещения.
             </p>
           </div>
         </div>
       </div>
 
-      {/* AI Errors & Corrections */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-400" />
-          <span>Ошибки AI и их устранение (AI Errors & Fixes)</span>
-        </h4>
-        <div className="p-4 bg-slate-950/60 border border-rose-900/40 rounded-xl space-y-2 text-xs">
-          <div className="text-rose-300 font-semibold">
-            • Ошибка первоначальной классификации фактора дедлайна:
+      {/* AI Errors & Fixes */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-zinc-200">
+          Ошибки AI и их устранение (AI Errors & Fixes)
+        </h3>
+        <div className="p-4 bg-[#111214] border border-[#202326] rounded-lg space-y-2 text-xs">
+          <div className="text-zinc-200 font-medium">
+            Ошибка первоначальной классификации фактора дедлайна:
           </div>
-          <div className="text-slate-300 pl-3 border-l-2 border-rose-800 space-y-1">
+          <div className="text-zinc-400 space-y-1 pl-3 border-l-2 border-zinc-700">
             <p><strong>Что предложил AI:</strong> В первой версии плана AI предложил считать просроченный дедлайн (deadline &lt; 0) блокирующим hard constraint, делающим расселение невозможным.</p>
-            <p><strong>Почему это было плохим решением:</strong> В реальном операционном процессе просроченное привидение (например, Луиза) обязано быть расселено как можно быстрее. Блокировать расселение из-за просрочки противоречит бизнес-логике бюро.</p>
+            <p><strong>Почему это было плохим решением:</strong> В реальном процессе просроченное привидение (Луиза) обязано быть расселено как можно скорее. Блокировать расселение из-за просрочки противоречит здравому смыслу.</p>
             <p><strong>Как исправлено:</strong> Оператор вовремя скорректировал модель: дедлайн был перенесен в модуль приоритета очереди (`calculateGhostPriority`), поднимая просроченные заявки на самый верх диспетчерского списка.</p>
           </div>
         </div>
       </div>
 
       {/* Stages 1-8 Accordion */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>Хронологические этапы разработки (1–8)</span>
-        </h4>
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-zinc-200">
+          Хронологические этапы разработки (1–8)
+        </h3>
 
-        <div className="space-y-2">
+        <div className="space-y-1.5 border border-[#202326] rounded-lg overflow-hidden bg-[#111214] divide-y divide-[#1b1d20]">
           {stages.map(stage => {
             const isOpen = !!openStages[stage.number];
             return (
-              <div
-                key={stage.number}
-                className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/40"
-              >
+              <div key={stage.number}>
                 <button
                   onClick={() => toggleStage(stage.number)}
-                  className="w-full p-3.5 flex items-center justify-between text-left hover:bg-slate-800/40 transition-colors"
+                  className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-[#16181b] transition-colors"
                 >
-                  <span className="font-semibold text-xs text-slate-200">{stage.title}</span>
+                  <span className="font-medium text-xs text-zinc-200">{stage.title}</span>
                   {isOpen ? (
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                    <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                    <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
                   )}
                 </button>
 
                 {isOpen && (
-                  <div className="p-4 pt-1 border-t border-slate-800/60 space-y-2.5 text-xs text-slate-300">
+                  <div className="px-4 pb-4 pt-1 space-y-2 text-xs text-zinc-400 bg-[#0e1012]">
                     <div>
-                      <strong className="text-indigo-300 block mb-0.5">Что сделал человек:</strong>
-                      <p className="text-slate-400">{stage.humanAction}</p>
+                      <strong className="text-zinc-300 block mb-0.5">Что сделал человек:</strong>
+                      <p>{stage.humanAction}</p>
                     </div>
                     <div>
-                      <strong className="text-sky-300 block mb-0.5">Что сделал AI:</strong>
-                      <p className="text-slate-400">{stage.aiAction}</p>
+                      <strong className="text-zinc-300 block mb-0.5">Что сделал AI:</strong>
+                      <p>{stage.aiAction}</p>
                     </div>
-                    <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-                      <strong className="text-amber-300 block mb-0.5 font-mono text-[11px]">Ключевой промпт:</strong>
-                      <p className="font-mono text-[11px] text-slate-300">{stage.keyPrompt}</p>
+                    <div className="p-2 bg-[#131517] rounded border border-[#202326] font-mono text-[11px] text-zinc-300">
+                      <strong className="text-zinc-400 block mb-0.5">Ключевой промпт:</strong>
+                      <p>{stage.keyPrompt}</p>
                     </div>
                     <div>
-                      <strong className="text-emerald-300 block mb-0.5">Результат:</strong>
-                      <p className="text-slate-300 font-medium">{stage.result}</p>
+                      <strong className="text-zinc-300 block mb-0.5">Результат:</strong>
+                      <p className="text-zinc-200">{stage.result}</p>
                     </div>
                   </div>
                 )}
@@ -311,36 +272,25 @@ export const AiWorklogPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Roadmap & What to improve */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-violet-400" />
-          <span>План будущих улучшений (Roadmap)</span>
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300">
-          <div className="p-3 bg-slate-950/50 rounded-xl border border-slate-800 space-y-1">
-            <span className="font-semibold text-slate-100">1. Persistent Backend & ORM</span>
-            <p className="text-slate-400">
-              Переход с локального хранилища на PostgreSQL/FastAPI с аудитом изменений (Audit Trail) и версионированием заявок.
-            </p>
+      {/* Roadmap */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-zinc-200">План будущих улучшений (Roadmap)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-zinc-400">
+          <div className="p-3 bg-[#111214] rounded-lg border border-[#202326] space-y-0.5">
+            <span className="font-medium text-zinc-200">1. Persistent Backend & ORM</span>
+            <p>Переход с localStorage на PostgreSQL/FastAPI с аудитом изменений и версионированием заявок.</p>
           </div>
-          <div className="p-3 bg-slate-950/50 rounded-xl border border-slate-800 space-y-1">
-            <span className="font-semibold text-slate-100">2. Венгерский алгоритм (Kuhn-Munkres)</span>
-            <p className="text-slate-400">
-              Переход от жадного приоритетного подбора к глобальной максимизации суммарного коэффициента удовлетворенности бюро.
-            </p>
+          <div className="p-3 bg-[#111214] rounded-lg border border-[#202326] space-y-0.5">
+            <span className="font-medium text-zinc-200">2. Венгерский алгоритм (Kuhn-Munkres)</span>
+            <p>Глобальная оптимизация распределения для максимизации суммарного скора бюро.</p>
           </div>
-          <div className="p-3 bg-slate-950/50 rounded-xl border border-slate-800 space-y-1">
-            <span className="font-semibold text-slate-100">3. Real-time Multi-Operator (WebSockets)</span>
-            <p className="text-slate-400">
-              Коллаборативная блокировка заявок в реальном времени, предотвращающая конфликт одновременных ручных назначений.
-            </p>
+          <div className="p-3 bg-[#111214] rounded-lg border border-[#202326] space-y-0.5">
+            <span className="font-medium text-zinc-200">3. Real-time WebSockets</span>
+            <p>Коллаборативный режим одновременной работы нескольких операторов с блокировками.</p>
           </div>
-          <div className="p-3 bg-slate-950/50 rounded-xl border border-slate-800 space-y-1">
-            <span className="font-semibold text-slate-100">4. Календарные события и сезонные аномалии</span>
-            <p className="text-slate-400">
-              Динамическое изменение характеристик мест по сезонам (период дождей в Маяке, приток туристов в Замок).
-            </p>
+          <div className="p-3 bg-[#111214] rounded-lg border border-[#202326] space-y-0.5">
+            <span className="font-medium text-zinc-200">4. Календарные события</span>
+            <p>Динамические средовые коэффициенты в зависимости от сезона и внешних условий.</p>
           </div>
         </div>
       </div>

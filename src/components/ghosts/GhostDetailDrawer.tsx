@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Sparkles, UserCheck, Thermometer, Brain, MapPin, Undo2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { GhostApplication } from '../../types/ghost';
 import type { RelocationPlace } from '../../types/place';
 import type { PlaceMatchEvaluation } from '../../types/matching';
@@ -59,153 +59,105 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 flex justify-end bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
-        <div className="w-full max-w-xl bg-slate-900 border-l border-slate-800 h-full flex flex-col shadow-2xl overflow-hidden">
-          {/* Drawer Header */}
-          <div className="p-5 border-b border-slate-800 flex items-start justify-between bg-slate-900/90">
-            <div className="space-y-1">
+      <div className="fixed inset-0 z-40 flex justify-end bg-black/50">
+        <div className="w-full max-w-lg bg-[#111214] border-l border-[#202326] h-full flex flex-col shadow-2xl">
+          {/* HEADER */}
+          <div className="p-5 border-b border-[#202326] flex items-center justify-between">
+            <div className="space-y-0.5">
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-slate-100">{ghost.name}</h3>
-                <span className="text-xs font-mono text-slate-400">ID: {ghost.id}</span>
-                {ghost.manualOverride && (
-                  <Badge variant="purple" size="sm">
-                    Ручной выбор
+                <h2 className="text-base font-semibold text-zinc-100">{ghost.name}</h2>
+                <span className="text-xs font-mono text-zinc-500">#{ghost.id}</span>
+              </div>
+              <div>
+                {ghost.assignedPlaceId ? (
+                  <Badge variant="success" size="sm">
+                    {ghost.manualOverride ? 'Назначено вручную' : 'Расселено автоматически'}
                   </Badge>
+                ) : (
+                  <Badge variant="default" size="sm">В обработке</Badge>
                 )}
               </div>
-              <p className="text-xs text-slate-400">{ghost.bio || 'Заявка на переселение'}</p>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+              className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Drawer Content */}
-          <div className="p-5 overflow-y-auto space-y-6 flex-1">
-            {/* Parameters Grid */}
-            <div className="grid grid-cols-2 gap-3 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                  <Brain className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Уровень тревожности:</span>
+          {/* CONTENT: Clean structured sections with dividers */}
+          <div className="p-6 overflow-y-auto space-y-5 flex-1 divide-y divide-[#202326]">
+            {/* 1. BASIC INFO */}
+            <div className="space-y-3">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 block">
+                Параметры привидения
+              </span>
+              <div className="grid grid-cols-3 gap-3 text-xs">
+                <div>
+                  <div className="text-zinc-500 text-[11px]">Тревожность</div>
+                  <div className="text-zinc-200 font-medium mt-0.5">{anxietyLabels[ghost.anxietyLevel]}</div>
                 </div>
                 <div>
-                  <Badge
-                    variant={
-                      ghost.anxietyLevel === 'high'
-                        ? 'danger'
-                        : ghost.anxietyLevel === 'medium'
-                        ? 'warning'
-                        : 'success'
-                    }
-                  >
-                    {anxietyLabels[ghost.anxietyLevel]}
-                  </Badge>
+                  <div className="text-zinc-500 text-[11px]">Температура</div>
+                  <div className="text-zinc-200 font-medium mt-0.5">{tempLabels[ghost.preferredTemperature]}</div>
                 </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                  <Thermometer className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Температура:</span>
-                </div>
-                <div className="text-xs font-semibold text-slate-200">
-                  {tempLabels[ghost.preferredTemperature]}
-                </div>
-              </div>
-
-              <div className="space-y-1 col-span-2 pt-2 border-t border-slate-800/80">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400">Дедлайн переселения:</span>
-                  <DeadlineBadge hoursLeft={ghost.deadlineHoursLeft} />
+                <div>
+                  <div className="text-zinc-500 text-[11px]">Дедлайн</div>
+                  <div className="mt-0.5">
+                    <DeadlineBadge hoursLeft={ghost.deadlineHoursLeft} />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Special Conditions */}
-            <div className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Специальные требования и фобии:
+            {/* 2. REQUIREMENTS (Hard constraints & soft prefs) */}
+            <div className="pt-4 space-y-2 text-xs">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 block">
+                Ограничения и условия
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {ghost.specialRequirements.isolatedFromHumans && (
-                  <Badge variant="danger" size="sm">
-                    🚫 Нельзя рядом с людьми (Hard)
-                  </Badge>
+                  <Badge variant="danger" size="sm">Изоляция от людей (Hard)</Badge>
                 )}
                 {ghost.specialRequirements.requiresAttic && (
-                  <Badge variant="warning" size="sm">
-                    🏠 Нужен чердак (Hard)
-                  </Badge>
+                  <Badge variant="warning" size="sm">Обязателен чердак (Hard)</Badge>
                 )}
                 {ghost.specialRequirements.requiresCellar && (
-                  <Badge variant="warning" size="sm">
-                    🗝️ Нужен подвал (Hard)
-                  </Badge>
+                  <Badge variant="warning" size="sm">Обязателен подвал (Hard)</Badge>
                 )}
                 {ghost.specialRequirements.noMirrors && (
-                  <Badge variant="danger" size="sm">
-                    🪞 Боится зеркал (Hard)
-                  </Badge>
+                  <Badge variant="danger" size="sm">Без зеркал (Hard)</Badge>
                 )}
                 {ghost.specialRequirements.prefersSilence && (
-                  <Badge variant="info" size="sm">
-                    🤫 Любит тишину
-                  </Badge>
+                  <Badge variant="default" size="sm">Предпочитает тишину</Badge>
                 )}
                 {ghost.specialRequirements.likesDampness && (
-                  <Badge variant="info" size="sm">
-                    💧 Любит сырость
-                  </Badge>
-                )}
-                {ghost.specialRequirements.prefersDarkness && (
-                  <Badge variant="purple" size="sm">
-                    🌑 Предпочитает темноту
-                  </Badge>
+                  <Badge variant="default" size="sm">Любит сырость</Badge>
                 )}
                 {Object.keys(ghost.specialRequirements).length === 0 && (
-                  <span className="text-xs text-slate-500 italic">Специфических ограничений нет</span>
+                  <span className="text-zinc-500 italic">Специфических ограничений нет</span>
                 )}
               </div>
             </div>
 
-            {/* Current Relocation Target */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  {ghost.assignedPlaceId ? 'Текущее место обитания' : 'Рекомендованное место'}
-                </span>
-                {ghost.assignedPlaceId && (
-                  <span className="text-xs text-emerald-400 flex items-center gap-1 font-medium">
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>Расселено</span>
-                  </span>
-                )}
-              </div>
+            {/* 3. RECOMMENDATION & WHY THIS PLACE */}
+            <div className="pt-4 space-y-3">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 block">
+                {ghost.assignedPlaceId ? 'Назначенное место' : 'Рекомендация алгоритма'}
+              </span>
 
               {activePlace ? (
-                <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-indigo-400" />
-                      <span className="font-semibold text-slate-100 text-sm">{activePlace.name}</span>
-                    </div>
-                    <Badge variant="default" size="sm">
-                      {activePlace.type}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-slate-400">{activePlace.description}</p>
+                <div className="text-xs space-y-1">
+                  <div className="text-sm font-semibold text-zinc-100">{activePlace.name}</div>
+                  <p className="text-zinc-400 text-xs leading-relaxed">{activePlace.description}</p>
                 </div>
               ) : (
-                <div className="bg-slate-950/50 border border-dashed border-slate-800 rounded-xl p-4 text-center text-xs text-slate-400">
-                  Место еще не выбрано или переселение невозможно
+                <div className="text-xs text-zinc-500 italic">
+                  Подходящего места нет в доступном пуле
                 </div>
               )}
 
-              {/* Match Factors Breakdown */}
               <MatchBreakdown
                 evaluation={activeEvaluation}
                 placeName={activePlace?.name}
@@ -215,37 +167,35 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
             </div>
           </div>
 
-          {/* Drawer Actions Footer */}
-          <div className="p-4 border-t border-slate-800 bg-slate-900/90 flex items-center justify-between gap-3">
+          {/* ACTIONS */}
+          <div className="p-4 border-t border-[#202326] bg-[#0e1012] flex items-center justify-between gap-3">
             {ghost.assignedPlaceId ? (
               <button
                 onClick={() => onUnassign(ghost.id)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-rose-950/60 hover:text-rose-300 text-slate-300 rounded-lg text-xs font-medium border border-slate-700/60 transition-colors"
+                className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
               >
-                <Undo2 className="w-3.5 h-3.5" />
-                <span>Снять назначение</span>
+                Снять назначение
               </button>
             ) : recommendedPlaceId ? (
               <button
-                onClick={() => onManualAssign(ghost.id, recommendedPlaceId, 'Принятие рекомендации алгоритма')}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-emerald-950/40 transition-colors"
+                onClick={() => onManualAssign(ghost.id, recommendedPlaceId, 'Принятие рекомендации')}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-medium transition-colors"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Заселить по рекомендации</span>
+                Назначить рекомендацию
               </button>
-            ) : null}
+            ) : <div />}
 
             <button
               onClick={() => setShowManualModal(true)}
-              className="ml-auto flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-indigo-950/40 transition-colors"
+              className="px-4 py-1.5 bg-zinc-100 hover:bg-white text-zinc-900 rounded text-xs font-semibold shadow-sm transition-colors"
             >
-              <span>{ghost.assignedPlaceId ? 'Изменить место вручную' : 'Выбрать место вручную'}</span>
+              {ghost.assignedPlaceId ? 'Изменить место' : 'Выбрать место'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Manual Assign Modal */}
+      {/* Manual Assign Decision Modal */}
       <ManualAssignModal
         ghost={ghost}
         places={places}

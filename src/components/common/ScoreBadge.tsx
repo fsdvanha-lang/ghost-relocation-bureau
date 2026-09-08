@@ -4,43 +4,32 @@ interface ScoreBadgeProps {
   score: number;
   isEligible?: boolean;
   size?: 'sm' | 'md' | 'lg';
-  showLabel?: boolean;
 }
 
 export const ScoreBadge: React.FC<ScoreBadgeProps> = ({
   score,
   isEligible = true,
-  size = 'md',
-  showLabel = true
+  size = 'md'
 }) => {
-  let colorClasses = 'bg-emerald-950/70 text-emerald-400 border-emerald-800/60';
-  let barColor = 'bg-emerald-500';
-
+  let textColor = 'text-emerald-400';
   if (!isEligible || score < 50) {
-    colorClasses = 'bg-rose-950/70 text-rose-400 border-rose-800/60';
-    barColor = 'bg-rose-500';
+    textColor = 'text-rose-400';
   } else if (score < 80) {
-    colorClasses = 'bg-amber-950/70 text-amber-400 border-amber-800/60';
-    barColor = 'bg-amber-500';
+    textColor = 'text-amber-400';
   }
 
-  const paddingClass = size === 'sm' ? 'px-2 py-0.5 text-xs' : size === 'lg' ? 'px-3 py-1.5 text-sm' : 'px-2.5 py-1 text-xs';
+  if (size === 'lg') {
+    return (
+      <div className="flex items-baseline gap-1 font-mono">
+        <span className={`text-2xl font-semibold tracking-tight ${textColor}`}>{score}</span>
+        <span className="text-xs text-zinc-500">/ 100</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="inline-flex items-center gap-1.5">
-      <div className={`font-mono font-semibold rounded-md border flex items-center gap-1 ${colorClasses} ${paddingClass}`}>
-        {showLabel && <span className="opacity-70 text-[10px] uppercase font-sans">Скор</span>}
-        <span>{score}</span>
-        <span className="opacity-50 text-[10px]">/100</span>
-      </div>
-      {size === 'lg' && (
-        <div className="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-            style={{ width: `${Math.max(5, Math.min(100, score))}%` }}
-          />
-        </div>
-      )}
-    </div>
+    <span className={`font-mono text-xs font-semibold ${textColor}`}>
+      {score}<span className="text-zinc-500 font-normal text-[11px]">/100</span>
+    </span>
   );
 };
