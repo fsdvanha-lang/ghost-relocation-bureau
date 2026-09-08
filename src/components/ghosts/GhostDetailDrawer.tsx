@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { 
+  X, 
+  Check, 
+  AlertTriangle, 
+  ChevronRight, 
+  CheckCircle2, 
+  Thermometer, 
+  Clock, 
+  Flame,
+  CheckCheck
+} from 'lucide-react';
 import type { GhostApplication } from '../../types/ghost';
 import type { RelocationPlace } from '../../types/place';
 import type { PlaceMatchEvaluation } from '../../types/matching';
-import { Badge } from '../common/Badge';
-import { DeadlineBadge } from '../common/DeadlineBadge';
-import { MatchBreakdown } from '../matching/MatchBreakdown';
+import { GhostAvatar } from '../common/GhostAvatar';
+import { PlaceThumbnail } from '../common/PlaceThumbnail';
+import { ScoreRing } from '../common/ScoreRing';
 import { ManualAssignModal } from '../matching/ManualAssignModal';
 
 interface GhostDetailDrawerProps {
@@ -36,6 +46,7 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
   onUnassign
 }) => {
   const [showManualModal, setShowManualModal] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   if (!isOpen || !ghost) return null;
 
@@ -52,150 +63,394 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
   const tempLabels = {
     freezing: 'Ледяная',
     cold: 'Холодная',
-    cool: 'Прохладная',
-    moderate: 'Умеренная',
-    warm: 'Тёплая'
+    cool: 'Прохладно',
+    moderate: 'Умеренно',
+    warm: 'Тепло'
+  };
+
+  // Format deadline string like in mockup
+  const formatDeadline = (hoursLeft: number) => {
+    if (hoursLeft < 0) return 'Просрочен';
+    if (hoursLeft <= 16) return '< 16 ч.';
+    if (hoursLeft <= 24) return '< 24 ч.';
+    if (hoursLeft <= 48) return '< 48 ч.';
+    const days = Math.round(hoursLeft / 24);
+    if (days === 1) return '1 день';
+    if (days >= 2 && days <= 4) return `${days} дня`;
+    return `${days} дней`;
+  };
+
+  // Status badge matching mockup
+  let statusBadge = (
+    <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+      Новая
+    </span>
+  );
+  if (ghost.assignedPlaceId) {
+    statusBadge = (
+      <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+        <Check className="w-3 h-3" />
+        Подобрано
+      </span>
+    );
+  } else if (impossibleReasons && impossibleReasons.length > 0) {
+    statusBadge = (
+      <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+        Невозможно
+      </span>
+    );
+  } else if (ghost.deadlineHoursLeft <= 24) {
+    statusBadge = (
+      <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+        Требует решения
+      </span>
+    );
+  }
+
+  // Find alternative eligible places sorted by score (excluding current active place)
+  const alternatives = places
+    .filter(p => p.id !== activePlaceId && evaluations[p.id]?.isEligible)
+    .sort((a, b) => (evaluations[b.id]?.score || 0) - (evaluations[a.id]?.score || 0))
+    .slice(0, 3);
+
+  const handleSaveDecision = () => {
+    if (activePlaceId) {
+      onManualAssign(ghost.id, activePlaceId, 'Подтверждение оператором');
+    }
+    setSaveSuccess(true);
+    setTimeout(() => {
+      setSaveSuccess(false);
+      onClose();
+    }, 500);
   };
 
   return (
     <>
-      <div className="fixed inset-0 z-40 flex justify-end bg-black/50">
-        <div className="w-full max-w-lg bg-[#111214] border-l border-[#202326] h-full flex flex-col shadow-2xl">
-          {/* HEADER */}
-          <div className="p-5 border-b border-[#202326] flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-zinc-100">{ghost.name}</h2>
-                <span className="text-xs font-mono text-zinc-500">#{ghost.id}</span>
-              </div>
+      {/* Backdrop overlay */}
+      <div 
+        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Slide-in Drawer Container */}
+      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-[440px] bg-[#0e1320] border-l border-[#1d273d] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+        {/* Top bar with close button */}
+        <div className="h-14 px-6 flex items-center justify-between border-b border-[#1b253b]">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Карточка привидения
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-[#182338] rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Scrollable body content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* 1. HERO SECTION: Big Glowing Avatar & Info */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <GhostAvatar size="xl" className="w-20 h-20 shadow-[0_0_24px_rgba(59,130,246,0.35)]" />
               <div>
-                {ghost.assignedPlaceId ? (
-                  <Badge variant="success" size="sm">
-                    {ghost.manualOverride ? 'Назначено вручную' : 'Расселено автоматически'}
-                  </Badge>
-                ) : (
-                  <Badge variant="default" size="sm">В обработке</Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-white tracking-tight">{ghost.name}</h2>
+                </div>
+                <div className="text-xs font-mono text-slate-400 mt-0.5">#{ghost.id}</div>
+                <div className="text-xs text-slate-400 mt-1">
+                  {ghost.bio ? ghost.bio.split('.')[0] : 'Заявка на переселение'}
+                </div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div>{statusBadge}</div>
           </div>
 
-          {/* CONTENT: Clean structured sections with dividers */}
-          <div className="p-6 overflow-y-auto space-y-5 flex-1 divide-y divide-[#202326]">
-            {/* 1. BASIC INFO */}
-            <div className="space-y-3">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 block">
-                Параметры привидения
-              </span>
-              <div className="grid grid-cols-3 gap-3 text-xs">
-                <div>
-                  <div className="text-zinc-500 text-[11px]">Тревожность</div>
-                  <div className="text-zinc-200 font-medium mt-0.5">{anxietyLabels[ghost.anxietyLevel]}</div>
+          {/* 2. THREE METRIC PILLS: Anxiety, Temperature, Deadline */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-[#141b2b] border border-[#1f2b42] rounded-xl p-2.5 flex items-center gap-2">
+              <Flame className="w-4 h-4 text-rose-400 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[10px] text-slate-400 leading-tight">Тревожность</div>
+                <div className="text-xs font-semibold text-slate-100 truncate mt-0.5">
+                  {anxietyLabels[ghost.anxietyLevel]}
                 </div>
-                <div>
-                  <div className="text-zinc-500 text-[11px]">Температура</div>
-                  <div className="text-zinc-200 font-medium mt-0.5">{tempLabels[ghost.preferredTemperature]}</div>
+              </div>
+            </div>
+
+            <div className="bg-[#141b2b] border border-[#1f2b42] rounded-xl p-2.5 flex items-center gap-2">
+              <Thermometer className="w-4 h-4 text-sky-400 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[10px] text-slate-400 leading-tight">Температура</div>
+                <div className="text-xs font-semibold text-slate-100 truncate mt-0.5">
+                  {tempLabels[ghost.preferredTemperature]}
                 </div>
-                <div>
-                  <div className="text-zinc-500 text-[11px]">Дедлайн</div>
-                  <div className="mt-0.5">
-                    <DeadlineBadge hoursLeft={ghost.deadlineHoursLeft} />
+              </div>
+            </div>
+
+            <div className="bg-[#141b2b] border border-[#1f2b42] rounded-xl p-2.5 flex items-center gap-2">
+              <Clock className={`w-4 h-4 shrink-0 ${ghost.deadlineHoursLeft < 0 ? 'text-rose-400' : 'text-amber-400'}`} />
+              <div className="min-w-0">
+                <div className="text-[10px] text-slate-400 leading-tight">Дедлайн</div>
+                <div className={`text-xs font-semibold truncate mt-0.5 ${ghost.deadlineHoursLeft < 0 ? 'text-rose-400' : 'text-slate-100'}`}>
+                  {formatDeadline(ghost.deadlineHoursLeft)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. ОСОБЫЕ УСЛОВИЯ (Special Requirements Pills) */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              Особые условия
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {ghost.specialRequirements.requiresAttic && (
+                <span className="px-3 py-1.5 rounded-lg text-xs bg-[#161f33] text-slate-200 border border-[#223152] flex items-center gap-1.5">
+                  <span>🏚️</span> Нужен чердак
+                </span>
+              )}
+              {ghost.specialRequirements.noMirrors && (
+                <span className="px-3 py-1.5 rounded-lg text-xs bg-[#161f33] text-slate-200 border border-[#223152] flex items-center gap-1.5">
+                  <span>🪞</span> Боится зеркал
+                </span>
+              )}
+              {ghost.specialRequirements.isolatedFromHumans && (
+                <span className="px-3 py-1.5 rounded-lg text-xs bg-[#161f33] text-slate-200 border border-[#223152] flex items-center gap-1.5">
+                  <span>🚫</span> Нельзя рядом с людьми
+                </span>
+              )}
+              {ghost.specialRequirements.requiresCellar && (
+                <span className="px-3 py-1.5 rounded-lg text-xs bg-[#161f33] text-slate-200 border border-[#223152] flex items-center gap-1.5">
+                  <span>🚪</span> Нужен подвал
+                </span>
+              )}
+              {ghost.specialRequirements.prefersSilence && (
+                <span className="px-3 py-1.5 rounded-lg text-xs bg-[#161f33] text-slate-200 border border-[#223152] flex items-center gap-1.5">
+                  <span>🤫</span> Любит тишину
+                </span>
+              )}
+              {ghost.specialRequirements.likesDampness && (
+                <span className="px-3 py-1.5 rounded-lg text-xs bg-[#161f33] text-slate-200 border border-[#223152] flex items-center gap-1.5">
+                  <span>💧</span> Любит сырость
+                </span>
+              )}
+              {Object.keys(ghost.specialRequirements).length === 0 && (
+                <span className="text-xs text-slate-500 italic">Специальных ограничений нет</span>
+              )}
+            </div>
+          </div>
+
+          {/* 4. РЕКОМЕНДУЕМОЕ МЕСТО (Place Card with Score Ring) */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-blue-400">◎</span>
+              <h3 className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
+                {ghost.assignedPlaceId ? 'Назначенное место' : 'Рекомендуемое место'}
+              </h3>
+            </div>
+
+            {activePlace ? (
+              <div 
+                onClick={() => setShowManualModal(true)}
+                className="group bg-[#141b2c] hover:bg-[#18233a] border border-[#202c46] hover:border-blue-500/40 rounded-xl p-3.5 flex items-center justify-between gap-3 cursor-pointer transition-all shadow-md"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <PlaceThumbnail
+                    placeType={activePlace.type}
+                    placeId={activePlace.id}
+                    className="w-16 h-12 rounded-lg"
+                  />
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors truncate">
+                      {activePlace.name}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      {activePlace.type}
+                    </div>
                   </div>
                 </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {activeEvaluation && (
+                    <ScoreRing
+                      score={activeEvaluation.score}
+                      maxScore={100}
+                      size={46}
+                      strokeWidth={4}
+                      colorClass={activeEvaluation.score >= 80 ? 'text-emerald-400' : 'text-amber-400'}
+                      showSubtext={true}
+                    />
+                  )}
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+                </div>
               </div>
+            ) : (
+              <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300">
+                Нет доступных мест с соблюдением обязательных условий
+              </div>
+            )}
+          </div>
+
+          {/* 5. ПОЧЕМУ ЭТО МЕСТО? (Structured Factors) */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-slate-400">📄</span>
+              <h3 className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
+                Почему это место?
+              </h3>
             </div>
 
-            {/* 2. REQUIREMENTS (Hard constraints & soft prefs) */}
-            <div className="pt-4 space-y-2 text-xs">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 block">
-                Ограничения и условия
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {ghost.specialRequirements.isolatedFromHumans && (
-                  <Badge variant="danger" size="sm">Изоляция от людей (Hard)</Badge>
-                )}
-                {ghost.specialRequirements.requiresAttic && (
-                  <Badge variant="warning" size="sm">Обязателен чердак (Hard)</Badge>
-                )}
-                {ghost.specialRequirements.requiresCellar && (
-                  <Badge variant="warning" size="sm">Обязателен подвал (Hard)</Badge>
-                )}
-                {ghost.specialRequirements.noMirrors && (
-                  <Badge variant="danger" size="sm">Без зеркал (Hard)</Badge>
-                )}
-                {ghost.specialRequirements.prefersSilence && (
-                  <Badge variant="default" size="sm">Предпочитает тишину</Badge>
-                )}
-                {ghost.specialRequirements.likesDampness && (
-                  <Badge variant="default" size="sm">Любит сырость</Badge>
-                )}
-                {Object.keys(ghost.specialRequirements).length === 0 && (
-                  <span className="text-zinc-500 italic">Специфических ограничений нет</span>
-                )}
-              </div>
-            </div>
+            <div className="bg-[#121826] border border-[#1b253b] rounded-xl p-3.5 space-y-2.5 text-xs">
+              {activeEvaluation ? (
+                <>
+                  {/* Hard Conflicts (Violations) */}
+                  {activeEvaluation.hardConflicts.map((hc, idx) => (
+                    <div key={`hc-${idx}`} className="flex items-start gap-2">
+                      <X className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                      <span className="text-rose-400 font-medium">
+                        {hc.message}
+                      </span>
+                    </div>
+                  ))}
 
-            {/* 3. RECOMMENDATION & WHY THIS PLACE */}
-            <div className="pt-4 space-y-3">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 block">
-                {ghost.assignedPlaceId ? 'Назначенное место' : 'Рекомендация алгоритма'}
-              </span>
+                  {/* Pros (Green Checkmarks) */}
+                  {activeEvaluation.pros.map((pro, idx) => (
+                    <div key={`pro-${idx}`} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span className="text-slate-200">
+                        {pro.message}
+                      </span>
+                    </div>
+                  ))}
 
-              {activePlace ? (
-                <div className="text-xs space-y-1">
-                  <div className="text-sm font-semibold text-zinc-100">{activePlace.name}</div>
-                  <p className="text-zinc-400 text-xs leading-relaxed">{activePlace.description}</p>
+                  {/* Warnings (Amber Triangle) */}
+                  {activeEvaluation.warnings.map((warn, idx) => (
+                    <div key={`warn-${idx}`} className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span className="text-amber-300/90">
+                        {warn.message}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Displacement note if displaced */}
+                  {displacementReason && (
+                    <div className="pt-2 border-t border-[#1b253b] flex items-start gap-2 text-amber-400">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{displacementReason}</span>
+                    </div>
+                  )}
+                </>
+              ) : impossibleReasons && impossibleReasons.length > 0 ? (
+                <div className="space-y-1 text-rose-400">
+                  {impossibleReasons.map((r, idx) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <X className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{r}</span>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="text-xs text-zinc-500 italic">
-                  Подходящего места нет в доступном пуле
+                <div className="text-slate-500 italic">
+                  Место еще не выбрано для оценки
                 </div>
               )}
-
-              <MatchBreakdown
-                evaluation={activeEvaluation}
-                placeName={activePlace?.name}
-                displacementReason={displacementReason}
-                impossibleReasons={impossibleReasons}
-              />
             </div>
           </div>
 
-          {/* ACTIONS */}
-          <div className="p-4 border-t border-[#202326] bg-[#0e1012] flex items-center justify-between gap-3">
-            {ghost.assignedPlaceId ? (
-              <button
-                onClick={() => onUnassign(ghost.id)}
-                className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
-              >
-                Снять назначение
-              </button>
-            ) : recommendedPlaceId ? (
-              <button
-                onClick={() => onManualAssign(ghost.id, recommendedPlaceId, 'Принятие рекомендации')}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-medium transition-colors"
-              >
-                Назначить рекомендацию
-              </button>
-            ) : <div />}
+          {/* 6. АЛЬТЕРНАТИВНЫЕ ВАРИАНТЫ (Alternative Choices) */}
+          {alternatives.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Альтернативные варианты
+              </h3>
 
+              <div className="space-y-2">
+                {alternatives.map(altPlace => {
+                  const altEval = evaluations[altPlace.id];
+                  return (
+                    <div
+                      key={altPlace.id}
+                      onClick={() => onManualAssign(ghost.id, altPlace.id, 'Выбор альтернативного варианта')}
+                      className="group bg-[#121826] hover:bg-[#162033] border border-[#1b253b] hover:border-[#283857] rounded-xl p-2.5 flex items-center justify-between gap-3 cursor-pointer transition-all"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <PlaceThumbnail
+                          placeType={altPlace.type}
+                          placeId={altPlace.id}
+                          className="w-10 h-10 rounded-lg"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-slate-200 group-hover:text-blue-300 transition-colors truncate">
+                            {altPlace.name}
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                            {altPlace.description.slice(0, 48)}...
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-mono font-bold text-slate-200">
+                          {altEval?.score}%
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-200 transition-colors" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 7. STICKY BOTTOM ACTIONS (Exact mockup buttons) */}
+        <div className="p-4 border-t border-[#1b253b] bg-[#0b101c] flex items-center gap-2.5">
+          {ghost.assignedPlaceId && (
             <button
-              onClick={() => setShowManualModal(true)}
-              className="px-4 py-1.5 bg-zinc-100 hover:bg-white text-zinc-900 rounded text-xs font-semibold shadow-sm transition-colors"
+              onClick={() => {
+                onUnassign(ghost.id);
+                onClose();
+              }}
+              className="py-2.5 px-3 rounded-xl text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-[#233350] transition-colors"
+              title="Снять привидение с места"
             >
-              {ghost.assignedPlaceId ? 'Изменить место' : 'Выбрать место'}
+              Снять
             </button>
-          </div>
+          )}
+
+          <button
+            onClick={() => setShowManualModal(true)}
+            className="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-200 hover:text-white bg-[#162033] hover:bg-[#1e2c45] border border-[#233350] transition-colors text-center"
+          >
+            Изменить место
+          </button>
+
+          <button
+            onClick={handleSaveDecision}
+            disabled={!activePlaceId}
+            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold text-white transition-all shadow-md flex items-center justify-center gap-1.5 ${
+              saveSuccess
+                ? 'bg-emerald-600'
+                : 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/25 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none'
+            }`}
+          >
+            {saveSuccess ? (
+              <>
+                <CheckCheck className="w-4 h-4" />
+                Сохранено
+              </>
+            ) : (
+              'Сохранить решение'
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Manual Assign Decision Modal */}
+      {/* Manual Assignment Modal with override confirmation */}
       <ManualAssignModal
         ghost={ghost}
         places={places}

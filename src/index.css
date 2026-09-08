@@ -4,24 +4,33 @@
 
 @layer base {
   :root {
-    --bg-app: #0c0d0e;
-    --bg-surface: #131517;
-    --bg-surface-hover: #1a1c1e;
-    --border-subtle: #202326;
-    --border-strong: #2a2e33;
-    --text-primary: #f3f4f6;
-    --text-secondary: #9ca3af;
-    --text-muted: #6b7280;
+    --bg-app: #0b0e14;
+    --bg-card: #121722;
+    --bg-card-hover: #182030;
+    --border-card: #1e2638;
+    --border-card-strong: #2a354c;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
   }
 
   body {
-    background-color: var(--bg-app);
-    color: var(--text-primary);
+    background-color: #0b0e14;
+    color: #f8fafc;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
   }
+}
+
+/* Custom glowing and atmospheric utilities */
+.glow-cyan {
+  box-shadow: 0 0 25px -5px rgba(56, 189, 248, 0.25);
+}
+
+.glow-blue {
+  box-shadow: 0 0 20px -3px rgba(59, 130, 246, 0.35);
 }
 
 /* Minimalist scrollbars */
@@ -33,9 +42,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #25282c;
+  background: #1e2638;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #34383e;
+  background: #2a354c;
 }

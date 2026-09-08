@@ -6,9 +6,18 @@ import { ApplicationsPage } from './pages/ApplicationsPage';
 import { PlacesPage } from './pages/PlacesPage';
 import { DecisionsPage } from './pages/DecisionsPage';
 import { AiWorklogPage } from './pages/AiWorklogPage';
+import { GhostDetailDrawer } from './components/ghosts/GhostDetailDrawer';
 
 const AppContent: React.FC = () => {
-  const { state } = useBureau();
+  const { 
+    state, 
+    selectedGhost, 
+    selectGhost, 
+    assignManual, 
+    unassignGhost 
+  } = useBureau();
+
+  const selectedResult = selectedGhost ? state.allocation.ghostResults[selectedGhost.id] : null;
 
   const renderCurrentView = () => {
     switch (state.activeView) {
@@ -27,7 +36,26 @@ const AppContent: React.FC = () => {
     }
   };
 
-  return <AppLayout>{renderCurrentView()}</AppLayout>;
+  return (
+    <AppLayout>
+      {renderCurrentView()}
+
+      {/* Global Ghost Inspection Drawer */}
+      <GhostDetailDrawer
+        ghost={selectedGhost}
+        places={state.places}
+        evaluations={selectedResult?.evaluations || {}}
+        placeOccupants={state.allocation.placeOccupants}
+        recommendedPlaceId={selectedResult?.recommendedPlaceId || null}
+        displacementReason={selectedResult?.displacementReason}
+        impossibleReasons={selectedResult?.impossibleReasons}
+        isOpen={!!selectedGhost}
+        onClose={() => selectGhost(null)}
+        onManualAssign={assignManual}
+        onUnassign={unassignGhost}
+      />
+    </AppLayout>
+  );
 };
 
 export function App() {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useBureau } from '../context/BureauContext';
 import { Badge } from '../components/common/Badge';
+import { PlaceThumbnail } from '../components/common/PlaceThumbnail';
 
 export const PlacesPage: React.FC = () => {
   const { state, selectGhost } = useBureau();
@@ -34,19 +35,19 @@ export const PlacesPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 select-none">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 border-b border-[#202326] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 border-b border-[#1b253b] pb-4">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-100 tracking-tight">Места переселения</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <h2 className="text-xl font-bold text-white tracking-tight">Места переселения</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
             Каталог локаций, физические параметры микроклимата и контроль свободной емкости
           </p>
         </div>
       </div>
 
-      {/* Grid of Places - Clean, un-nested cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Grid of Places */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {state.places.map(place => {
           const occupantIds = state.allocation.placeOccupants[place.id] || [];
           const occupants = occupantIds
@@ -60,14 +61,20 @@ export const PlacesPage: React.FC = () => {
           return (
             <div
               key={place.id}
-              className="bg-[#111214] border border-[#202326] rounded-lg p-4 space-y-3.5 hover:border-[#2f3338] transition-colors flex flex-col justify-between"
+              className="bg-[#101625] border border-[#1b253b] rounded-2xl p-4 space-y-3.5 hover:border-blue-500/40 transition-colors flex flex-col justify-between shadow-md"
             >
               <div className="space-y-2.5">
+                <PlaceThumbnail
+                  placeType={place.type}
+                  placeId={place.id}
+                  className="w-full h-28 rounded-xl"
+                />
+
                 {/* Header */}
                 <div className="flex items-baseline justify-between gap-2">
                   <div>
-                    <span className="text-[10px] uppercase font-mono text-zinc-500">{place.type}</span>
-                    <h3 className="text-sm font-semibold text-zinc-200">{place.name}</h3>
+                    <span className="text-[10px] uppercase font-mono text-slate-400">{place.type}</span>
+                    <h3 className="text-sm font-bold text-white">{place.name}</h3>
                   </div>
                   {isFull ? (
                     <Badge variant="danger" size="sm">Заполнено</Badge>

@@ -4,15 +4,12 @@ import { useBureau } from '../context/BureauContext';
 import { Badge } from '../components/common/Badge';
 import { DeadlineBadge } from '../components/common/DeadlineBadge';
 import { ScoreBadge } from '../components/common/ScoreBadge';
-import { GhostDetailDrawer } from '../components/ghosts/GhostDetailDrawer';
+import { GhostAvatar } from '../components/common/GhostAvatar';
 
 export const ApplicationsPage: React.FC = () => {
   const {
     state,
-    selectedGhost,
-    selectGhost,
-    assignManual,
-    unassignGhost
+    selectGhost
   } = useBureau();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,60 +31,58 @@ export const ApplicationsPage: React.FC = () => {
     });
   }, [state.ghosts, searchQuery, statusFilter]);
 
-  const selectedResult = selectedGhost ? state.allocation.ghostResults[selectedGhost.id] : null;
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 select-none">
       {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#202326]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#1b253b]">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-100 tracking-tight">Заявки привидений</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <h2 className="text-xl font-bold text-white tracking-tight">Заявки привидений</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
             Реестр входящих обращений и текущий статус распределения
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="relative w-64">
-            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Поиск по имени..."
-              className="w-full pl-8 pr-3 py-1.5 bg-[#131517] border border-[#26292d] rounded-md text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors"
+              className="w-full pl-8 pr-3 py-1.5 bg-[#141b2c] border border-[#212d46] rounded-full text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
 
-          <div className="flex items-center gap-1 bg-[#131517] p-0.5 rounded-md border border-[#26292d] text-xs">
+          <div className="flex items-center gap-1 bg-[#0e1320] p-1 rounded-xl border border-[#1b253b] text-xs">
             <button
               onClick={() => setStatusFilter('all')}
-              className={`px-2.5 py-1 rounded transition-colors ${
-                statusFilter === 'all' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+              className={`px-3 py-1 rounded-lg transition-colors ${
+                statusFilter === 'all' ? 'bg-[#1b263b] text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Все ({state.ghosts.length})
             </button>
             <button
               onClick={() => setStatusFilter('assigned')}
-              className={`px-2.5 py-1 rounded transition-colors ${
-                statusFilter === 'assigned' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+              className={`px-3 py-1 rounded-lg transition-colors ${
+                statusFilter === 'assigned' ? 'bg-[#1b263b] text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Расселено
             </button>
             <button
               onClick={() => setStatusFilter('urgent')}
-              className={`px-2.5 py-1 rounded transition-colors ${
-                statusFilter === 'urgent' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+              className={`px-3 py-1 rounded-lg transition-colors ${
+                statusFilter === 'urgent' ? 'bg-[#1b263b] text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Срочные
             </button>
             <button
               onClick={() => setStatusFilter('unassigned')}
-              className={`px-2.5 py-1 rounded transition-colors ${
-                statusFilter === 'unassigned' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+              className={`px-3 py-1 rounded-lg transition-colors ${
+                statusFilter === 'unassigned' ? 'bg-[#1b263b] text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Без места
@@ -97,24 +92,24 @@ export const ApplicationsPage: React.FC = () => {
       </div>
 
       {/* Operations Table */}
-      <div className="border border-[#202326] rounded-lg overflow-hidden bg-[#111214]">
+      <div className="border border-[#1b253b] rounded-2xl overflow-hidden bg-[#101625] shadow-md">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="border-b border-[#202326] text-zinc-500 font-medium">
-              <th className="py-2.5 px-4 font-normal">Привидение</th>
-              <th className="py-2.5 px-4 font-normal">Тревожность</th>
-              <th className="py-2.5 px-4 font-normal">Температура</th>
-              <th className="py-2.5 px-4 font-normal">Дедлайн</th>
-              <th className="py-2.5 px-4 font-normal">Рекомендуемое место</th>
-              <th className="py-2.5 px-4 font-normal">Score</th>
-              <th className="py-2.5 px-4 font-normal">Статус</th>
-              <th className="py-2.5 px-4 font-normal text-right">Действие</th>
+            <tr className="border-b border-[#1b253b] text-slate-400 font-medium">
+              <th className="py-3 px-4 font-normal">Привидение</th>
+              <th className="py-3 px-4 font-normal">Тревожность</th>
+              <th className="py-3 px-4 font-normal">Температура</th>
+              <th className="py-3 px-4 font-normal">Дедлайн</th>
+              <th className="py-3 px-4 font-normal">Рекомендуемое место</th>
+              <th className="py-3 px-4 font-normal">Score</th>
+              <th className="py-3 px-4 font-normal">Статус</th>
+              <th className="py-3 px-4 font-normal text-right">Действие</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#1b1d20]">
+          <tbody className="divide-y divide-[#151c2d]">
             {filteredGhosts.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-10 text-center text-zinc-500">
+                <td colSpan={8} className="py-10 text-center text-slate-500">
                   Заявок по заданным критериям не найдено.
                 </td>
               </tr>
@@ -160,11 +155,16 @@ export const ApplicationsPage: React.FC = () => {
                   <tr
                     key={ghost.id}
                     onClick={() => selectGhost(ghost.id)}
-                    className="hover:bg-[#16181b] cursor-pointer transition-colors"
+                    className="hover:bg-[#141c2c] cursor-pointer transition-colors"
                   >
-                    <td className="py-2.5 px-4 font-medium text-zinc-200">
-                      {ghost.name}
-                      <span className="text-[11px] text-zinc-500 ml-1.5 font-normal">#{ghost.id}</span>
+                    <td className="py-3 px-4 font-medium text-slate-200">
+                      <div className="flex items-center gap-2.5">
+                        <GhostAvatar size="sm" />
+                        <div>
+                          <span className="font-semibold text-white">{ghost.name}</span>
+                          <span className="text-[11px] text-slate-500 ml-1.5 font-mono">#{ghost.id}</span>
+                        </div>
+                      </div>
                     </td>
                     <td className="py-2.5 px-4 text-zinc-400">
                       {anxietyLabels[ghost.anxietyLevel]}
@@ -204,21 +204,6 @@ export const ApplicationsPage: React.FC = () => {
           </tbody>
         </table>
       </div>
-
-      {/* Ghost Detail Drawer */}
-      <GhostDetailDrawer
-        ghost={selectedGhost}
-        places={state.places}
-        evaluations={selectedResult?.evaluations || {}}
-        placeOccupants={state.allocation.placeOccupants}
-        recommendedPlaceId={selectedResult?.recommendedPlaceId || null}
-        displacementReason={selectedResult?.displacementReason}
-        impossibleReasons={selectedResult?.impossibleReasons}
-        isOpen={!!selectedGhost}
-        onClose={() => selectGhost(null)}
-        onManualAssign={assignManual}
-        onUnassign={unassignGhost}
-      />
     </div>
   );
 };
