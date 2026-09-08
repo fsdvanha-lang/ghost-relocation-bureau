@@ -1,5 +1,6 @@
 import React from 'react';
 import { BureauProvider, useBureau } from './context/BureauContext';
+import { ToastProvider } from './components/common/ToastContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { ApplicationsPage } from './pages/ApplicationsPage';
@@ -18,6 +19,21 @@ const AppContent: React.FC = () => {
   } = useBureau();
 
   const selectedResult = selectedGhost ? state.allocation.ghostResults[selectedGhost.id] : null;
+
+  // Drawer Prev / Next ghost inspector navigation
+  const currentIndex = selectedGhost
+    ? state.ghosts.findIndex(g => g.id === selectedGhost.id)
+    : -1;
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < state.ghosts.length - 1;
+
+  const handleNavigatePrev = () => {
+    if (hasPrev) selectGhost(state.ghosts[currentIndex - 1].id);
+  };
+
+  const handleNavigateNext = () => {
+    if (hasNext) selectGhost(state.ghosts[currentIndex + 1].id);
+  };
 
   const renderCurrentView = () => {
     switch (state.activeView) {
@@ -40,7 +56,7 @@ const AppContent: React.FC = () => {
     <AppLayout>
       {renderCurrentView()}
 
-      {/* Global Ghost Inspection Drawer */}
+      {/* Global Ghost Inspection Drawer with Inspector Navigation */}
       <GhostDetailDrawer
         ghost={selectedGhost}
         places={state.places}
@@ -53,6 +69,10 @@ const AppContent: React.FC = () => {
         onClose={() => selectGhost(null)}
         onManualAssign={assignManual}
         onUnassign={unassignGhost}
+        onNavigatePrev={hasPrev ? handleNavigatePrev : undefined}
+        onNavigateNext={hasNext ? handleNavigateNext : undefined}
+        hasPrev={hasPrev}
+        hasNext={hasNext}
       />
     </AppLayout>
   );
@@ -61,7 +81,9 @@ const AppContent: React.FC = () => {
 export function App() {
   return (
     <BureauProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </BureauProvider>
   );
 }

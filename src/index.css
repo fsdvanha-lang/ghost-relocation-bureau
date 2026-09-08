@@ -4,18 +4,26 @@
 
 @layer base {
   :root {
-    --bg-app: #0b0e14;
-    --bg-card: #121722;
-    --bg-card-hover: #182030;
-    --border-card: #1e2638;
-    --border-card-strong: #2a354c;
+    --bg-app: #090d16;
+    --bg-card: #101625;
+    --bg-card-hover: #141c2c;
+    --border-card: #1b253b;
+    --border-card-strong: #283754;
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
+
+    /* Motion System Tokens */
+    --ease-out-cubic: cubic-bezier(0.22, 1, 0.36, 1);
+    --duration-micro: 180ms;
+    --duration-button: 200ms;
+    --duration-drawer: 320ms;
+    --duration-section: 420ms;
+    --duration-counter: 600ms;
   }
 
   body {
-    background-color: #0b0e14;
+    background-color: #090d16;
     color: #f8fafc;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
@@ -24,7 +32,119 @@
   }
 }
 
-/* Custom glowing and atmospheric utilities */
+/* ==========================================================================
+   Motion System & Keyframe Animations (Strict B2B Premium Easing)
+   ========================================================================== */
+
+@keyframes entranceFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rowUpdateHighlight {
+  0% {
+    background-color: rgba(59, 130, 246, 0.18);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes deltaFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  25% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes attentionOnce {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 16px 2px rgba(244, 63, 94, 0.35);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);
+  }
+}
+
+@keyframes toastEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Staggered entrance helper classes */
+.animate-entrance-0 {
+  animation: entranceFadeUp 400ms cubic-bezier(0.22, 1, 0.36, 1) 0ms both;
+}
+.animate-entrance-1 {
+  animation: entranceFadeUp 420ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+}
+.animate-entrance-2 {
+  animation: entranceFadeUp 440ms cubic-bezier(0.22, 1, 0.36, 1) 150ms both;
+}
+.animate-entrance-3 {
+  animation: entranceFadeUp 460ms cubic-bezier(0.22, 1, 0.36, 1) 220ms both;
+}
+.animate-entrance-4 {
+  animation: entranceFadeUp 480ms cubic-bezier(0.22, 1, 0.36, 1) 300ms both;
+}
+.animate-entrance-5 {
+  animation: entranceFadeUp 500ms cubic-bezier(0.22, 1, 0.36, 1) 400ms both;
+}
+.animate-entrance-6 {
+  animation: entranceFadeUp 520ms cubic-bezier(0.22, 1, 0.36, 1) 500ms both;
+}
+
+/* Row update flash */
+.animate-row-update {
+  animation: rowUpdateHighlight 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Delta indicator */
+.animate-delta {
+  animation: deltaFloat 800ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Attention once */
+.animate-attention-once {
+  animation: attentionOnce 450ms cubic-bezier(0.22, 1, 0.36, 1) 1 both;
+}
+
+/* Toast enter */
+.animate-toast-enter {
+  animation: toastEnter 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Glow utilities */
 .glow-cyan {
   box-shadow: 0 0 25px -5px rgba(56, 189, 248, 0.25);
 }
@@ -42,9 +162,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e2638;
+  background: #1b253b;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2a354c;
+  background: #283754;
 }

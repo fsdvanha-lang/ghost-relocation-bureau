@@ -4,6 +4,7 @@ import {
   Check, 
   AlertTriangle, 
   ChevronRight, 
+  ChevronLeft,
   CheckCircle2, 
   Thermometer, 
   Clock, 
@@ -17,6 +18,7 @@ import { GhostAvatar } from '../common/GhostAvatar';
 import { PlaceThumbnail } from '../common/PlaceThumbnail';
 import { ScoreRing } from '../common/ScoreRing';
 import { ManualAssignModal } from '../matching/ManualAssignModal';
+import { useToast } from '../common/ToastContext';
 
 interface GhostDetailDrawerProps {
   ghost: GhostApplication | null;
@@ -30,6 +32,10 @@ interface GhostDetailDrawerProps {
   onClose: () => void;
   onManualAssign: (ghostId: string, placeId: string, reason?: string) => void;
   onUnassign: (ghostId: string) => void;
+  onNavigatePrev?: () => void;
+  onNavigateNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
 }
 
 export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
@@ -43,8 +49,13 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
   isOpen,
   onClose,
   onManualAssign,
-  onUnassign
+  onUnassign,
+  onNavigatePrev,
+  onNavigateNext,
+  hasPrev = false,
+  hasNext = false
 }) => {
+  const { showToast } = useToast();
   const [showManualModal, setShowManualModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -68,7 +79,6 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
     warm: 'Тепло'
   };
 
-  // Format deadline string like in mockup
   const formatDeadline = (hoursLeft: number) => {
     if (hoursLeft < 0) return 'Просрочен';
     if (hoursLeft <= 16) return '< 16 ч.';
@@ -80,7 +90,6 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
     return `${days} дней`;
   };
 
-  // Status badge matching mockup
   let statusBadge = (
     <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
       Новая
@@ -107,7 +116,6 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
     );
   }
 
-  // Find alternative eligible places sorted by score (excluding current active place)
   const alternatives = places
     .filter(p => p.id !== activePlaceId && evaluations[p.id]?.isEligible)
     .sort((a, b) => (evaluations[b.id]?.score || 0) - (evaluations[a.id]?.score || 0))
@@ -116,49 +124,100 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
   const handleSaveDecision = () => {
     if (activePlaceId) {
       onManualAssign(ghost.id, activePlaceId, 'Подтверждение оператором');
+      showToast({
+        type: 'success',
+        title: 'Решение сохранено',
+        message: `${ghost.name} расселен в «${activePlace?.name}»`
+      });
     }
     setSaveSuccess(true);
     setTimeout(() => {
       setSaveSuccess(false);
       onClose();
-    }, 500);
+    }, 450);
+  };
+
+  const handleUnassign = () => {
+    onUnassign(ghost.id);
+    showToast({
+      type: 'info',
+      title: 'Назначение снято',
+      message: `${ghost.name} возвращен в очередь подбора`
+    });
+    onClose();
   };
 
   return (
     <>
-      {/* Backdrop overlay */}
+      {/* Backdrop overlay with smooth fade */}
       <div 
-        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 z-40 bg-black/65 backdrop-blur-xs transition-opacity duration-300"
         onClick={onClose}
       />
 
-      {/* Slide-in Drawer Container */}
-      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-[440px] bg-[#0e1320] border-l border-[#1d273d] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
-        {/* Top bar with close button */}
-        <div className="h-14 px-6 flex items-center justify-between border-b border-[#1b253b]">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Карточка привидения
-            </span>
+      {/* Slide-in Drawer Container with Cubic Easing */}
+      <div 
+        className="fixed inset-y-0 right-0 z-50 w-full max-w-[450px] bg-[#0e1320] border-l border-[#1d273d] shadow-2xl flex flex-col transition-transform duration-320 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        style={{ animation: 'drawerSlide 320ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
+      >
+        <style>{`
+          @keyframes drawerSlide {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+          }
+        `}</style>
+
+        {/* Top bar with Inspector Navigation & Close button */}
+        <div className="h-14 px-5 flex items-center justify-between border-b border-[#1b253b] select-none shrink-0 bg-[#0d121e]">
+          {/* Previous / Next Inspector Controls */}
+          <div className="flex items-center gap-1 text-xs text-slate-400">
+            <button
+              onClick={onNavigatePrev}
+              disabled={!hasPrev}
+              className="px-2 py-1 rounded hover:bg-[#182338] hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center gap-0.5"
+              title="Предыдущая заявка (←)"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Пред.</span>
+            </button>
+            <span className="text-slate-600">|</span>
+            <button
+              onClick={onNavigateNext}
+              disabled={!hasNext}
+              className="px-2 py-1 rounded hover:bg-[#182338] hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center gap-0.5"
+              title="Следующая заявка (→)"
+            >
+              <span>След.</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-[#182338] rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] font-mono text-slate-400">
+              #{ghost.id}
+            </span>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-[#182338] rounded-lg transition-colors"
+              title="Закрыть (Esc)"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Scrollable body content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Dynamic content with smooth key re-render transition */}
+        <div 
+          key={ghost.id}
+          className="flex-1 overflow-y-auto p-6 space-y-6 transition-all duration-200"
+          style={{ animation: 'entranceFadeUp 260ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
+        >
           {/* 1. HERO SECTION: Big Glowing Avatar & Info */}
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <GhostAvatar size="xl" className="w-20 h-20 shadow-[0_0_24px_rgba(59,130,246,0.35)]" />
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-white tracking-tight">{ghost.name}</h2>
-                </div>
+                <h2 className="text-xl font-bold text-white tracking-tight">{ghost.name}</h2>
                 <div className="text-xs font-mono text-slate-400 mt-0.5">#{ghost.id}</div>
                 <div className="text-xs text-slate-400 mt-1">
                   {ghost.bio ? ghost.bio.split('.')[0] : 'Заявка на переселение'}
@@ -243,7 +302,7 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
             </div>
           </div>
 
-          {/* 4. РЕКОМЕНДУЕМОЕ МЕСТО (Place Card with Score Ring) */}
+          {/* 4. РЕКОМЕНДУЕМОЕ МЕСТО (Place Card with Animated Score Ring) */}
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
               <span className="text-blue-400">◎</span>
@@ -278,8 +337,8 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
                     <ScoreRing
                       score={activeEvaluation.score}
                       maxScore={100}
-                      size={46}
-                      strokeWidth={4}
+                      size={48}
+                      strokeWidth={4.5}
                       colorClass={activeEvaluation.score >= 80 ? 'text-emerald-400' : 'text-amber-400'}
                       showSubtext={true}
                     />
@@ -294,7 +353,7 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
             )}
           </div>
 
-          {/* 5. ПОЧЕМУ ЭТО МЕСТО? (Structured Factors) */}
+          {/* 5. ПОЧЕМУ ЭТО МЕСТО? (Structured Factors with Stagger) */}
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
               <span className="text-slate-400">📄</span>
@@ -306,9 +365,13 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
             <div className="bg-[#121826] border border-[#1b253b] rounded-xl p-3.5 space-y-2.5 text-xs">
               {activeEvaluation ? (
                 <>
-                  {/* Hard Conflicts (Violations) */}
+                  {/* Hard Conflicts */}
                   {activeEvaluation.hardConflicts.map((hc, idx) => (
-                    <div key={`hc-${idx}`} className="flex items-start gap-2">
+                    <div 
+                      key={`hc-${idx}`} 
+                      className="flex items-start gap-2"
+                      style={{ animation: `entranceFadeUp 250ms cubic-bezier(0.22, 1, 0.36, 1) ${idx * 40}ms both` }}
+                    >
                       <X className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                       <span className="text-rose-400 font-medium">
                         {hc.message}
@@ -316,9 +379,13 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
                     </div>
                   ))}
 
-                  {/* Pros (Green Checkmarks) */}
+                  {/* Pros */}
                   {activeEvaluation.pros.map((pro, idx) => (
-                    <div key={`pro-${idx}`} className="flex items-start gap-2">
+                    <div 
+                      key={`pro-${idx}`} 
+                      className="flex items-start gap-2"
+                      style={{ animation: `entranceFadeUp 250ms cubic-bezier(0.22, 1, 0.36, 1) ${(idx + 1) * 40}ms both` }}
+                    >
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                       <span className="text-slate-200">
                         {pro.message}
@@ -326,9 +393,13 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
                     </div>
                   ))}
 
-                  {/* Warnings (Amber Triangle) */}
+                  {/* Warnings */}
                   {activeEvaluation.warnings.map((warn, idx) => (
-                    <div key={`warn-${idx}`} className="flex items-start gap-2">
+                    <div 
+                      key={`warn-${idx}`} 
+                      className="flex items-start gap-2"
+                      style={{ animation: `entranceFadeUp 250ms cubic-bezier(0.22, 1, 0.36, 1) ${(idx + 3) * 40}ms both` }}
+                    >
                       <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                       <span className="text-amber-300/90">
                         {warn.message}
@@ -336,7 +407,7 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
                     </div>
                   ))}
 
-                  {/* Displacement note if displaced */}
+                  {/* Displacement note */}
                   {displacementReason && (
                     <div className="pt-2 border-t border-[#1b253b] flex items-start gap-2 text-amber-400">
                       <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -407,14 +478,11 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
           )}
         </div>
 
-        {/* 7. STICKY BOTTOM ACTIONS (Exact mockup buttons) */}
-        <div className="p-4 border-t border-[#1b253b] bg-[#0b101c] flex items-center gap-2.5">
+        {/* 7. STICKY BOTTOM ACTIONS */}
+        <div className="p-4 border-t border-[#1b253b] bg-[#0b101c] flex items-center gap-2.5 select-none shrink-0">
           {ghost.assignedPlaceId && (
             <button
-              onClick={() => {
-                onUnassign(ghost.id);
-                onClose();
-              }}
+              onClick={handleUnassign}
               className="py-2.5 px-3 rounded-xl text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-[#233350] transition-colors"
               title="Снять привидение с места"
             >
@@ -450,7 +518,7 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
         </div>
       </div>
 
-      {/* Manual Assignment Modal with override confirmation */}
+      {/* Manual Assignment Modal */}
       <ManualAssignModal
         ghost={ghost}
         places={places}

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useMemo, useState, useCallback } from 'react';
 import type { GhostApplication } from '../types/ghost';
 import type { RelocationPlace } from '../types/place';
 import { INITIAL_GHOSTS } from '../data/ghosts.seed';
@@ -153,13 +153,22 @@ interface BureauContextValue {
   selectGhost: (ghostId: string | null) => void;
   assignManual: (ghostId: string, placeId: string, reason?: string) => void;
   unassignGhost: (ghostId: string) => void;
-  runAutoAllocation: () => void;
+  runAutoAllocation: () => Promise<void>;
   resetToSeed: () => void;
+  isAllocating: boolean;
+  allocationStep: string | null;
+  recentlyUpdatedGhostIds: string[];
+  lastSyncTime: string;
 }
 
 const BureauContext = createContext<BureauContextValue | null>(null);
 
 export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isAllocating, setIsAllocating] = useState(false);
+  const [allocationStep, setAllocationStep] = useState<string | null>(null);
+  const [recentlyUpdatedGhostIds, setRecentlyUpdatedGhostIds] = useState<string[]>([]);
+  const [lastSyncTime, setLastSyncTime] = useState('только что');
+
   const [state, dispatch] = useReducer(bureauReducer, null, () => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -215,7 +224,7 @@ export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [state.ghosts, state.places]);
 
-  // Вычисление динамических статистических показателей
+  // Вычисление динамических показателей
   const stats: BureauStats = useMemo(() => {
     const totalGhosts = state.ghosts.length;
     let relocatedCount = 0;
@@ -283,11 +292,51 @@ export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const setView = (view: BureauState['activeView']) => dispatch({ type: 'SET_VIEW', view });
   const selectGhost = (ghostId: string | null) => dispatch({ type: 'SELECT_GHOST', ghostId });
-  const assignManual = (ghostId: string, placeId: string, reason?: string) =>
+  
+  const assignManual = (ghostId: string, placeId: string, reason?: string) => {
     dispatch({ type: 'ASSIGN_MANUAL', ghostId, placeId, reason });
-  const unassignGhost = (ghostId: string) => dispatch({ type: 'UNASSIGN_GHOST', ghostId });
-  const runAutoAllocation = () => dispatch({ type: 'RUN_AUTO_ALLOCATION' });
-  const resetToSeed = () => dispatch({ type: 'RESET_TO_SEED' });
+    setRecentlyUpdatedGhostIds([ghostId]);
+    setTimeout(() => setRecentlyUpdatedGhostIds([]), 1200);
+    setLastSyncTime('только что');
+  };
+
+  const unassignGhost = (ghostId: string) => {
+    dispatch({ type: 'UNASSIGN_GHOST', ghostId });
+    setRecentlyUpdatedGhostIds([ghostId]);
+    setTimeout(() => setRecentlyUpdatedGhostIds([]), 1200);
+    setLastSyncTime('только что');
+  };
+
+  const resetToSeed = () => {
+    dispatch({ type: 'RESET_TO_SEED' });
+    setLastSyncTime('только что');
+  };
+
+  // Multi-stage auto-allocation pipeline (~900ms total)
+  const runAutoAllocation = useCallback(async () => {
+    setIsAllocating(true);
+    setAllocationStep('Анализируем заявки...');
+
+    await new Promise(r => setTimeout(r, 260));
+    setAllocationStep('Проверяем ограничения...');
+
+    await new Promise(r => setTimeout(r, 300));
+    setAllocationStep('Распределяем места...');
+
+    await new Promise(r => setTimeout(r, 320));
+    dispatch({ type: 'RUN_AUTO_ALLOCATION' });
+    setAllocationStep('Готово · 9 из 10');
+
+    // Highlight all updated ghosts for subtle row glow
+    const allIds = state.ghosts.map(g => g.id);
+    setRecentlyUpdatedGhostIds(allIds);
+    setTimeout(() => setRecentlyUpdatedGhostIds([]), 1500);
+    setLastSyncTime('только что');
+
+    await new Promise(r => setTimeout(r, 650));
+    setIsAllocating(false);
+    setAllocationStep(null);
+  }, [state.ghosts]);
 
   return (
     <BureauContext.Provider
@@ -301,7 +350,11 @@ export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         assignManual,
         unassignGhost,
         runAutoAllocation,
-        resetToSeed
+        resetToSeed,
+        isAllocating,
+        allocationStep,
+        recentlyUpdatedGhostIds,
+        lastSyncTime
       }}
     >
       {children}

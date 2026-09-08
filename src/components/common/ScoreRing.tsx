@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface ScoreRingProps {
   score: number;
@@ -10,6 +10,7 @@ interface ScoreRingProps {
   showSubtext?: boolean;
   unit?: string;
   className?: string;
+  animate?: boolean;
 }
 
 export const ScoreRing: React.FC<ScoreRingProps> = ({
@@ -21,11 +22,42 @@ export const ScoreRing: React.FC<ScoreRingProps> = ({
   strokeColor,
   showSubtext = false,
   unit = '%',
-  className = ''
+  className = '',
+  animate = true
 }) => {
+  const [animatedScore, setAnimatedScore] = useState(animate ? 0 : score);
+
+  useEffect(() => {
+    if (!animate) {
+      setAnimatedScore(score);
+      return;
+    }
+
+    const startVal = 0;
+    const diff = score - startVal;
+    const duration = 650;
+    const startTime = performance.now();
+
+    const frame = (time: number) => {
+      const elapsed = time - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Easing: easeOutCubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const cur = Math.round(startVal + diff * eased);
+      setAnimatedScore(cur);
+
+      if (progress < 1) {
+        requestAnimationFrame(frame);
+      }
+    };
+
+    const id = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(id);
+  }, [score, animate]);
+
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(100, Math.max(0, (score / maxScore) * 100));
+  const progress = Math.min(100, Math.max(0, (animatedScore / maxScore) * 100));
   const offset = circumference - (progress / 100) * circumference;
 
   return (
@@ -44,7 +76,7 @@ export const ScoreRing: React.FC<ScoreRingProps> = ({
           className="text-slate-800/80"
           fill="none"
         />
-        {/* Progress bar */}
+        {/* Progress bar with smooth ease-out offset */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -54,13 +86,13 @@ export const ScoreRing: React.FC<ScoreRingProps> = ({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className={`${!strokeColor ? colorClass : ''} transition-all duration-700 ease-out`}
+          className={`${!strokeColor ? colorClass : ''} transition-all duration-300 ease-out`}
           fill="none"
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none">
         <span className="text-xs font-bold font-mono text-slate-100 leading-none">
-          {score}{unit && !showSubtext ? unit : ''}
+          {animatedScore}{unit && !showSubtext ? unit : ''}
         </span>
         {showSubtext && (
           <span className="text-[9px] text-slate-400 font-mono leading-none mt-0.5">

@@ -9,35 +9,52 @@ import {
   MoreHorizontal, 
   ArrowRight,
   Zap,
-  Sparkles,
   Home
 } from 'lucide-react';
 import { useBureau } from '../context/BureauContext';
 import { GhostAvatar } from '../components/common/GhostAvatar';
 import { ScoreRing } from '../components/common/ScoreRing';
 import { CastleHeaderBanner } from '../components/common/CastleHeaderBanner';
+import { AnimatedNumber } from '../components/common/AnimatedNumber';
+import { useToast } from '../components/common/ToastContext';
 
 export const DashboardPage: React.FC = () => {
-  const { state, stats, selectGhost, setView, runAutoAllocation } = useBureau();
+  const { 
+    state, 
+    stats, 
+    selectGhost, 
+    setView, 
+    runAutoAllocation,
+    isAllocating,
+    allocationStep,
+    recentlyUpdatedGhostIds,
+    lastSyncTime
+  } = useBureau();
 
+  const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [tableFilter, setTableFilter] = useState<'all' | 'new' | 'matched' | 'relocated' | 'problem'>('all');
-  const [isAllocating, setIsAllocating] = useState(false);
-  const [allocationToast, setAllocationToast] = useState<string | null>(null);
 
-  // Trigger auto allocation with clear visual feedback
-  const handleAutoAllocate = () => {
-    setIsAllocating(true);
-    setTimeout(() => {
-      runAutoAllocation();
-      setIsAllocating(false);
-      setAllocationToast(`✓ Подбор завершен: ${stats.relocatedCount} расселено, ${stats.unassignedCount} без места`);
-      setTimeout(() => setAllocationToast(null), 3500);
-    }, 400);
+  // Trigger multi-stage auto allocation with progress & toast feedback
+  const handleAutoAllocate = async () => {
+    if (isAllocating) return;
+    try {
+      await runAutoAllocation();
+      showToast({
+        type: 'success',
+        title: 'Авто-подбор завершён',
+        message: `${stats.relocatedCount} из ${stats.totalGhosts} привидений оптимально расселены`
+      });
+    } catch {
+      showToast({
+        type: 'warning',
+        title: 'Ошибка подбора',
+        message: 'Проверьте доступность мест и правила ограничений'
+      });
+    }
   };
 
   // Section 1: "Требуют внимания (4)"
-  // Louise (overdue), Bartholomew (< 16h), Seraphima (< 24h), Edgar (close deadline or needs review)
   const urgentGhosts = useMemo(() => {
     return state.ghosts
       .filter(g => g.deadlineHoursLeft <= 48 || g.status === 'impossible' || g.status === 'needs_attention')
@@ -111,26 +128,26 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6 select-none relative">
-      {/* Toast Notification */}
-      {allocationToast && (
-        <div className="fixed top-6 right-8 z-50 bg-[#162238] border border-blue-500/40 text-blue-200 px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2.5 text-xs animate-in slide-in-from-top duration-300">
-          <Sparkles className="w-4 h-4 text-blue-400" />
-          <span>{allocationToast}</span>
-        </div>
-      )}
-
-      {/* 1. TOP HEADER BANNER (Greeting + Castle Silhouette + Tools) */}
-      <div className="relative rounded-2xl bg-[#0e1320] border border-[#1b253b] p-6 overflow-hidden shadow-lg">
+      {/* 1. TOP HEADER BANNER (Entrance 150ms) */}
+      <div className="relative rounded-2xl bg-[#0e1320] border border-[#1b253b] p-6 overflow-hidden shadow-lg animate-entrance-2">
         <CastleHeaderBanner />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          {/* Left Title & Subtitle */}
+          {/* Left Title & Subtitle + Live Bureau Pulse */}
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-white tracking-tight">
                 Добро пожаловать в бюро
               </h1>
               <span className="text-rose-400 text-lg">✨</span>
+
+              {/* Living System Status Pill */}
+              <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-400 bg-[#12192a] border border-[#1e2a42] px-3 py-1 rounded-full shadow-inner">
+                <span className={`w-2 h-2 rounded-full ${isAllocating ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
+                <span>
+                  {isAllocating ? allocationStep || 'Анализируем...' : `Система стабильна · ${lastSyncTime}`}
+                </span>
+              </div>
             </div>
             <p className="text-xs text-slate-400 mt-1">
               Здесь вы распределяете привидений по подходящим местам обитания
@@ -139,8 +156,8 @@ export const DashboardPage: React.FC = () => {
 
           {/* Right Controls: Search, Status Chips, User, Auto-allocation Button */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* Search Input */}
-            <div className="relative w-64">
+            {/* Live Search Input */}
+            <div className="relative w-60">
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
@@ -151,29 +168,33 @@ export const DashboardPage: React.FC = () => {
               />
             </div>
 
-            {/* Chip 1: Available Slots */}
+            {/* Chip 1: Available Slots with Animated Number */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#141b2c] border border-[#212d46] rounded-full text-xs text-slate-300">
               <MapPin className="w-3.5 h-3.5 text-slate-400" />
-              <span className="font-bold text-white">{stats.availableSlots}</span>
+              <AnimatedNumber value={stats.availableSlots} className="font-bold text-white font-mono" />
               <span className="text-slate-400">свободных мест</span>
             </div>
 
-            {/* Chip 2: Needs Attention */}
+            {/* Chip 2: Needs Attention with Animated Number */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#141b2c] border border-[#212d46] rounded-full text-xs text-amber-400">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-              <span className="font-bold">{stats.needsAttentionCount}</span>
+              <AnimatedNumber value={stats.needsAttentionCount} className="font-bold font-mono" />
               <span className="text-amber-300/80">требуют внимания</span>
             </div>
 
-            {/* Auto-allocate Button */}
+            {/* Auto-allocate Button with multi-stage text */}
             <button
               onClick={handleAutoAllocate}
               disabled={isAllocating}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-xs font-semibold shadow-md shadow-blue-600/25 transition-all disabled:opacity-50"
+              className={`flex items-center gap-2 px-4 py-1.5 text-white rounded-full text-xs font-semibold shadow-md transition-all duration-200 ${
+                isAllocating
+                  ? 'bg-amber-600 shadow-amber-600/25'
+                  : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/25 hover:scale-[1.02] active:scale-[0.98]'
+              }`}
               title="Запустить алгоритм автоматического расселения"
             >
               <Zap className={`w-3.5 h-3.5 ${isAllocating ? 'animate-spin' : ''}`} />
-              <span>{isAllocating ? 'Подбор...' : 'Авто-подбор'}</span>
+              <span>{isAllocating ? allocationStep || 'Подбор...' : 'Запустить авто-подбор'}</span>
             </button>
 
             {/* Operator Avatar */}
@@ -184,12 +205,14 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. FIVE KPI STATS CARDS (Matching mockup row) */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
+      {/* 2. FIVE KPI STATS CARDS (Entrance 220ms with Animated Numbers) */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5 animate-entrance-3">
         {/* KPI 1: Всего заявок */}
-        <div className="bg-[#101625] border border-[#1b253b] rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-[#101625] border border-[#1b253b] rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <div className="text-2xl font-bold font-mono text-white tracking-tight">{stats.totalGhosts}</div>
+            <div className="text-2xl font-bold font-mono text-white tracking-tight">
+              <AnimatedNumber value={stats.totalGhosts} />
+            </div>
             <div className="text-xs text-slate-400 mt-1">Всего заявок</div>
           </div>
           <div className="w-9 h-9 rounded-full bg-[#182338] border border-[#243350] flex items-center justify-center text-slate-300">
@@ -198,9 +221,11 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* KPI 2: Расселено */}
-        <div className="bg-[#101625] border border-[#1b253b] rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-[#101625] border border-[#1b253b] rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <div className="text-2xl font-bold font-mono text-white tracking-tight">{stats.relocatedCount}</div>
+            <div className="text-2xl font-bold font-mono text-white tracking-tight">
+              <AnimatedNumber value={stats.relocatedCount} />
+            </div>
             <div className="text-xs text-slate-400 mt-1">Расселено</div>
           </div>
           <div className="w-9 h-9 rounded-full bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
@@ -209,9 +234,11 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* KPI 3: Без места */}
-        <div className="bg-[#101625] border border-[#1b253b] rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-[#101625] border border-[#1b253b] rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <div className="text-2xl font-bold font-mono text-white tracking-tight">{stats.unassignedCount}</div>
+            <div className="text-2xl font-bold font-mono text-white tracking-tight">
+              <AnimatedNumber value={stats.unassignedCount} />
+            </div>
             <div className="text-xs text-slate-400 mt-1">Без места</div>
           </div>
           <div className="w-9 h-9 rounded-full bg-rose-950/40 border border-rose-500/30 flex items-center justify-center text-rose-400">
@@ -220,9 +247,11 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* KPI 4: Требуют внимания */}
-        <div className="bg-[#101625] border border-[#1b253b] rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-[#101625] border border-[#1b253b] rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <div className="text-2xl font-bold font-mono text-white tracking-tight">{stats.needsAttentionCount}</div>
+            <div className="text-2xl font-bold font-mono text-white tracking-tight">
+              <AnimatedNumber value={stats.needsAttentionCount} />
+            </div>
             <div className="text-xs text-slate-400 mt-1">Требуют внимания</div>
           </div>
           <div className="w-9 h-9 rounded-full bg-amber-950/40 border border-amber-500/30 flex items-center justify-center text-amber-400">
@@ -230,23 +259,25 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 5: Загруженность мест (With circular progress ring) */}
-        <div className="bg-[#101625] border border-[#1b253b] rounded-xl p-4 flex items-center justify-between">
+        {/* KPI 5: Загруженность мест (Animated ScoreRing) */}
+        <div className="bg-[#101625] border border-[#1b253b] rounded-xl p-4 flex items-center justify-between shadow-sm">
           <ScoreRing
             score={stats.occupancyPercent}
-            size={46}
+            size={48}
             strokeWidth={4.5}
             colorClass="text-blue-500"
           />
           <div className="text-right">
             <div className="text-xs font-semibold text-slate-200">Загруженность</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">мест ({stats.totalOccupied}/{stats.totalCapacity})</div>
+            <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
+              {stats.totalOccupied} из {stats.totalCapacity} слотов
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 3. SECTION 1: ТРЕБУЮТ ВНИМАНИЯ (4) */}
-      <div className="bg-[#101625] border border-[#1b253b] rounded-2xl p-5 space-y-4 shadow-md">
+      {/* 3. SECTION 1: ТРЕБУЮТ ВНИМАНИЯ (Entrance 300ms) */}
+      <div className="bg-[#101625] border border-[#1b253b] rounded-2xl p-5 space-y-4 shadow-md animate-entrance-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-400" />
@@ -258,10 +289,10 @@ export const DashboardPage: React.FC = () => {
 
           <button
             onClick={() => setView('applications')}
-            className="text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors"
+            className="text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors group"
           >
             <span>Все заявки</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </button>
         </div>
 
@@ -271,17 +302,16 @@ export const DashboardPage: React.FC = () => {
             const activePlaceId = ghost.assignedPlaceId || result?.recommendedPlaceId;
             const evalScore = activePlaceId && result?.evaluations ? result.evaluations[activePlaceId]?.score : 70;
             const anxietyStyle = anxietyBadges[ghost.anxietyLevel] || anxietyBadges.medium;
-
             const isOverdue = ghost.deadlineHoursLeft < 0;
 
             return (
               <div
                 key={ghost.id}
                 onClick={() => selectGhost(ghost.id)}
-                className="py-3.5 flex items-center justify-between gap-4 group cursor-pointer hover:bg-[#141b2c]/60 px-2 rounded-xl transition-colors"
+                className="py-3.5 flex items-center justify-between gap-4 group cursor-pointer hover:bg-[#141b2c]/70 px-2.5 rounded-xl transition-all duration-180"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
-                  <GhostAvatar size="md" className="group-hover:scale-105 transition-transform" />
+                  <GhostAvatar size="md" className="group-hover:scale-105 transition-transform duration-200" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">
@@ -303,8 +333,8 @@ export const DashboardPage: React.FC = () => {
                     {formatDeadline(ghost.deadlineHoursLeft)}
                   </div>
 
-                  {/* Score */}
-                  <div className="text-xs font-mono font-bold text-slate-200 min-w-[40px] text-right">
+                  {/* Score with subtle highlight on hover */}
+                  <div className="text-xs font-mono font-bold text-slate-200 min-w-[40px] text-right group-hover:text-blue-400 transition-colors">
                     {evalScore ? `${evalScore}%` : '—'}
                   </div>
 
@@ -314,7 +344,7 @@ export const DashboardPage: React.FC = () => {
                       e.stopPropagation();
                       selectGhost(ghost.id);
                     }}
-                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all hover:shadow-blue-500/20"
+                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all duration-180 hover:shadow-blue-500/25 active:scale-95"
                   >
                     Подобрать
                   </button>
@@ -325,8 +355,8 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. SECTION 2: ЗАЯВКИ ПРИВИДЕНИЙ (10) */}
-      <div className="bg-[#101625] border border-[#1b253b] rounded-2xl p-5 space-y-4 shadow-md">
+      {/* 4. SECTION 2: ЗАЯВКИ ПРИВИДЕНИЙ (Entrance 400ms) */}
+      <div className="bg-[#101625] border border-[#1b253b] rounded-2xl p-5 space-y-4 shadow-md animate-entrance-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <h2 className="text-sm font-bold text-white tracking-tight">Заявки привидений</h2>
@@ -335,44 +365,44 @@ export const DashboardPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Filter tabs */}
+          {/* Filter tabs with smooth transition */}
           <div className="flex items-center gap-1 bg-[#0a0e17] p-1 rounded-xl border border-[#182338] text-xs">
             <button
               onClick={() => setTableFilter('all')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                tableFilter === 'all' ? 'bg-[#1b263b] text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3 py-1 rounded-lg transition-all duration-150 ${
+                tableFilter === 'all' ? 'bg-[#1b263b] text-white font-semibold shadow-xs' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Все
             </button>
             <button
               onClick={() => setTableFilter('new')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                tableFilter === 'new' ? 'bg-[#1b263b] text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3 py-1 rounded-lg transition-all duration-150 ${
+                tableFilter === 'new' ? 'bg-[#1b263b] text-white font-semibold shadow-xs' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Новые
             </button>
             <button
               onClick={() => setTableFilter('matched')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                tableFilter === 'matched' ? 'bg-[#1b263b] text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3 py-1 rounded-lg transition-all duration-150 ${
+                tableFilter === 'matched' ? 'bg-[#1b263b] text-white font-semibold shadow-xs' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Подобрано
             </button>
             <button
               onClick={() => setTableFilter('relocated')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                tableFilter === 'relocated' ? 'bg-[#1b263b] text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3 py-1 rounded-lg transition-all duration-150 ${
+                tableFilter === 'relocated' ? 'bg-[#1b263b] text-white font-semibold shadow-xs' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Расселено
             </button>
             <button
               onClick={() => setTableFilter('problem')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                tableFilter === 'problem' ? 'bg-[#1b263b] text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3 py-1 rounded-lg transition-all duration-150 ${
+                tableFilter === 'problem' ? 'bg-[#1b263b] text-white font-semibold shadow-xs' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Проблемные
@@ -380,7 +410,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Table matching mockup */}
+        {/* Table with row update animation */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -402,6 +432,7 @@ export const DashboardPage: React.FC = () => {
                 const activePlace = activePlaceId ? state.places.find(p => p.id === activePlaceId) : null;
                 const evalScore = activePlaceId && result?.evaluations ? result.evaluations[activePlaceId]?.score : undefined;
                 const anxietyStyle = anxietyBadges[ghost.anxietyLevel] || anxietyBadges.medium;
+                const isUpdated = recentlyUpdatedGhostIds.includes(ghost.id);
 
                 let statusBadge = (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30">
@@ -432,7 +463,9 @@ export const DashboardPage: React.FC = () => {
                   <tr
                     key={ghost.id}
                     onClick={() => selectGhost(ghost.id)}
-                    className="hover:bg-[#141c2c] cursor-pointer transition-colors"
+                    className={`hover:bg-[#141c2c] cursor-pointer transition-colors duration-150 ${
+                      isUpdated ? 'animate-row-update' : ''
+                    }`}
                   >
                     {/* Ghost Avatar + Name */}
                     <td className="py-3 px-3 font-medium text-slate-200">
@@ -501,9 +534,9 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 5. BOTTOM ROW: 3 CARDS (Загрузка мест, Статистика, Проблемные заявки) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Card 1: Загрузка мест */}
+      {/* 5. BOTTOM ROW: 3 CARDS (Entrance 500ms) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 animate-entrance-6">
+        {/* Card 1: Загрузка мест with smooth progress bar transitions */}
         <div className="bg-[#101625] border border-[#1b253b] rounded-2xl p-5 space-y-3.5 shadow-md">
           <h3 className="text-xs font-bold text-white uppercase tracking-wider">
             Загрузка мест
@@ -513,6 +546,7 @@ export const DashboardPage: React.FC = () => {
             {displayPlaces.map(place => {
               const occupants = state.allocation.placeOccupants[place.id] || [];
               const percent = Math.round((occupants.length / place.capacity) * 100);
+              const isFull = occupants.length >= place.capacity;
 
               return (
                 <div key={place.id} className="space-y-1 text-xs">
@@ -524,7 +558,9 @@ export const DashboardPage: React.FC = () => {
                   </div>
                   <div className="w-full h-1.5 bg-[#172033] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                      className={`h-full rounded-full transition-all duration-700 ease-out ${
+                        isFull ? 'bg-rose-500' : percent > 50 ? 'bg-amber-400' : 'bg-blue-500'
+                      }`}
                       style={{ width: `${percent}%` }}
                     />
                   </div>
@@ -534,14 +570,14 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 2: Статистика */}
+        {/* Card 2: Статистика with animated donut ScoreRing */}
         <div className="bg-[#101625] border border-[#1b253b] rounded-2xl p-5 space-y-3.5 shadow-md flex flex-col justify-between">
           <h3 className="text-xs font-bold text-white uppercase tracking-wider">
             Статистика
           </h3>
 
           <div className="flex items-center justify-between gap-4 py-2">
-            {/* Donut Score */}
+            {/* Donut Score with animated counter & fill */}
             <div className="flex items-center gap-3">
               <ScoreRing
                 score={90}
@@ -559,15 +595,21 @@ export const DashboardPage: React.FC = () => {
             <div className="space-y-1.5 text-xs text-right">
               <div className="flex items-center justify-end gap-2">
                 <span className="text-slate-400">Высокая тревожность</span>
-                <span className="font-bold font-mono text-slate-200">{anxietyCounts.high}</span>
+                <span className="font-bold font-mono text-slate-200">
+                  <AnimatedNumber value={anxietyCounts.high} />
+                </span>
               </div>
               <div className="flex items-center justify-end gap-2">
                 <span className="text-slate-400">Средняя тревожность</span>
-                <span className="font-bold font-mono text-slate-200">{anxietyCounts.medium}</span>
+                <span className="font-bold font-mono text-slate-200">
+                  <AnimatedNumber value={anxietyCounts.medium} />
+                </span>
               </div>
               <div className="flex items-center justify-end gap-2">
                 <span className="text-slate-400">Низкая тревожность</span>
-                <span className="font-bold font-mono text-slate-200">{anxietyCounts.low}</span>
+                <span className="font-bold font-mono text-slate-200">
+                  <AnimatedNumber value={anxietyCounts.low} />
+                </span>
               </div>
             </div>
           </div>
@@ -583,11 +625,11 @@ export const DashboardPage: React.FC = () => {
             {/* 1. Louise: Overdue */}
             <div
               onClick={() => selectGhost('ghost-4')}
-              className="flex items-center justify-between p-2 rounded-lg bg-[#141b2c] hover:bg-[#182338] cursor-pointer transition-colors"
+              className="flex items-center justify-between p-2 rounded-lg bg-[#141b2c] hover:bg-[#182338] cursor-pointer transition-colors duration-150 group"
             >
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
-                <span className="font-medium text-slate-200">Луиза</span>
+                <span className="font-medium text-slate-200 group-hover:text-white transition-colors">Луиза</span>
               </div>
               <span className="text-rose-400 text-[11px] font-medium">Просрочен дедлайн</span>
             </div>
@@ -595,23 +637,23 @@ export const DashboardPage: React.FC = () => {
             {/* 2. Bartholomew: Critical deadline */}
             <div
               onClick={() => selectGhost('ghost-5')}
-              className="flex items-center justify-between p-2 rounded-lg bg-[#141b2c] hover:bg-[#182338] cursor-pointer transition-colors"
+              className="flex items-center justify-between p-2 rounded-lg bg-[#141b2c] hover:bg-[#182338] cursor-pointer transition-colors duration-150 group"
             >
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                <span className="font-medium text-slate-200">Варфоломей</span>
+                <span className="font-medium text-slate-200 group-hover:text-white transition-colors">Варфоломей</span>
               </div>
               <span className="text-amber-400 text-[11px] font-medium">Критический дедлайн</span>
             </div>
 
-            {/* 3. Seraphima: Low score or close deadline */}
+            {/* 3. Seraphima: Low score */}
             <div
               onClick={() => selectGhost('ghost-7')}
-              className="flex items-center justify-between p-2 rounded-lg bg-[#141b2c] hover:bg-[#182338] cursor-pointer transition-colors"
+              className="flex items-center justify-between p-2 rounded-lg bg-[#141b2c] hover:bg-[#182338] cursor-pointer transition-colors duration-150 group"
             >
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                <span className="font-medium text-slate-200">Серафима</span>
+                <span className="font-medium text-slate-200 group-hover:text-white transition-colors">Серафима</span>
               </div>
               <span className="text-amber-400 text-[11px] font-medium">Низкий score (58%)</span>
             </div>
