@@ -135,7 +135,7 @@ function bureauReducer(state: BureauState, action: BureauAction): BureauState {
         places: initialPlaces,
         allocation: newAllocation,
         activeView: state.activeView,
-        selectedGhostId: null
+        selectedGhostId: 'ghost-1'
       };
     }
 
@@ -181,7 +181,7 @@ export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             places: parsed.places,
             allocation: alloc,
             activeView: 'dashboard' as const,
-            selectedGhostId: null
+            selectedGhostId: parsed.selectedGhostId || 'ghost-1'
           };
         }
       }
@@ -205,7 +205,7 @@ export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       places: INITIAL_PLACES,
       allocation: alloc,
       activeView: 'dashboard' as const,
-      selectedGhostId: null
+      selectedGhostId: 'ghost-1'
     };
   });
 

@@ -73,6 +73,7 @@ const AppContent: React.FC = () => {
         onNavigateNext={hasNext ? handleNavigateNext : undefined}
         hasPrev={hasPrev}
         hasNext={hasNext}
+        isDashboard={state.activeView === 'dashboard'}
       />
     </AppLayout>
   );

@@ -1,4 +1,6 @@
 import React from 'react';
+import libraryThumbImg from '../../assets/library-thumb.jpg';
+import castleHeaderImg from '../../assets/castle-header.jpg';
 
 interface PlaceThumbnailProps {
   placeType?: string;
@@ -12,7 +14,7 @@ export const PlaceThumbnail: React.FC<PlaceThumbnailProps> = ({
   placeId = '',
   className = 'w-16 h-12 rounded-lg'
 }) => {
-  // Return tailored atmospheric SVG backgrounds based on place type or id
+  // Return tailored atmospheric images and SVG backgrounds based on place type or id
   const isLibrary = placeType.toLowerCase().includes('библиотека') || placeId === 'place-3';
   const isCastle = placeType.toLowerCase().includes('замок') || placeId === 'place-1';
   const isTheater = placeType.toLowerCase().includes('театр') || placeId === 'place-4';
@@ -22,43 +24,19 @@ export const PlaceThumbnail: React.FC<PlaceThumbnailProps> = ({
   const isObservatory = placeType.toLowerCase().includes('обсерватория') || placeId === 'place-7';
 
   return (
-    <div className={`relative overflow-hidden shrink-0 border border-slate-700/50 shadow-md ${className}`}>
+    <div className={`relative overflow-hidden shrink-0 border border-[#212f4d] shadow-md ${className}`}>
       {isLibrary ? (
-        <svg viewBox="0 0 120 90" fill="none" className="w-full h-full object-cover">
-          <rect width="120" height="90" fill="#17130e" />
-          <path d="M0 65 L120 65 L120 90 L0 90 Z" fill="#291b10" />
-          {/* Bookshelves */}
-          <rect x="8" y="10" width="30" height="55" fill="#1f140c" rx="2" />
-          <rect x="42" y="5" width="36" height="60" fill="#2d1d11" rx="2" />
-          <rect x="82" y="10" width="30" height="55" fill="#1f140c" rx="2" />
-          {/* Book spines with warm colors */}
-          <rect x="12" y="20" width="4" height="20" fill="#854d0e" />
-          <rect x="18" y="18" width="5" height="22" fill="#991b1b" />
-          <rect x="25" y="22" width="4" height="18" fill="#1e3a8a" />
-          <rect x="46" y="15" width="5" height="25" fill="#78350f" />
-          <rect x="53" y="17" width="6" height="23" fill="#065f46" />
-          <rect x="61" y="14" width="5" height="26" fill="#831843" />
-          <rect x="68" y="18" width="5" height="22" fill="#92400e" />
-          {/* Warm lantern / candlelight glow */}
-          <circle cx="60" cy="50" r="18" fill="#fbbf24" fillOpacity="0.25" />
-          <circle cx="60" cy="50" r="8" fill="#fef08a" fillOpacity="0.4" />
-          <rect x="58" y="47" width="4" height="7" fill="#fff" rx="1" />
-        </svg>
+        <img
+          src={libraryThumbImg}
+          alt="Старая библиотека"
+          className="w-full h-full object-cover filter contrast-110"
+        />
       ) : isCastle ? (
-        <svg viewBox="0 0 120 90" fill="none" className="w-full h-full object-cover">
-          <rect width="120" height="90" fill="#090d16" />
-          {/* Moon */}
-          <circle cx="85" cy="24" r="12" fill="#cbd5e1" fillOpacity="0.8" />
-          <circle cx="85" cy="24" r="22" fill="#38bdf8" fillOpacity="0.1" />
-          {/* Cliff */}
-          <path d="M0 90 L40 55 L80 65 L120 90 Z" fill="#0f172a" />
-          {/* Castle spires */}
-          <path d="M25 65 V35 L32 20 L39 35 V65 H25 Z" fill="#1e293b" />
-          <path d="M39 65 V42 L48 28 L57 42 V65 H39 Z" fill="#0f172a" />
-          <path d="M57 65 V38 L63 25 L69 38 V65 H57 Z" fill="#1e293b" />
-          {/* Castle window glow */}
-          <rect x="46" y="46" width="4" height="6" rx="1" fill="#fbbf24" fillOpacity="0.8" />
-        </svg>
+        <img
+          src={castleHeaderImg}
+          alt="Замок на утесе"
+          className="w-full h-full object-cover object-center filter contrast-110"
+        />
       ) : isTheater ? (
         <svg viewBox="0 0 120 90" fill="none" className="w-full h-full object-cover">
           <rect width="120" height="90" fill="#150914" />

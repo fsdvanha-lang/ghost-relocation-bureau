@@ -1,11 +1,19 @@
 import React from 'react';
+import agathaAvatarImg from '../../assets/agatha-avatar.jpg';
 
 interface GhostAvatarProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  ghostId?: string;
+  usePhoto?: boolean;
 }
 
-export const GhostAvatar: React.FC<GhostAvatarProps> = ({ size = 'md', className = '' }) => {
+export const GhostAvatar: React.FC<GhostAvatarProps> = ({ 
+  size = 'md', 
+  className = '',
+  ghostId,
+  usePhoto
+}) => {
   const sizeMap = {
     sm: 'w-7 h-7',
     md: 'w-9 h-9',
@@ -13,15 +21,33 @@ export const GhostAvatar: React.FC<GhostAvatarProps> = ({ size = 'md', className
     xl: 'w-24 h-24'
   };
 
+  const showPaintedPortrait = usePhoto !== false && (usePhoto || size === 'xl' || ghostId === 'ghost-1');
+
+  if (showPaintedPortrait) {
+    return (
+      <div
+        className={`relative rounded-full flex items-center justify-center shrink-0 overflow-hidden border border-indigo-400/35 shadow-[0_4px_20px_rgba(0,0,0,0.6)] ${sizeMap[size]} ${className}`}
+      >
+        {/* Ambient subtle aura */}
+        <div className="absolute -inset-1 rounded-full bg-gradient-to-b from-indigo-500/20 via-sky-500/10 to-transparent pointer-events-none blur-sm" />
+        
+        {/* Agatha painted portrait image */}
+        <img
+          src={agathaAvatarImg}
+          alt="Ghost portrait"
+          className="w-full h-full object-cover scale-110 filter contrast-110 brightness-105"
+        />
+
+        {/* Soft vignette overlay */}
+        <div className="absolute inset-0 rounded-full shadow-inner pointer-events-none ring-1 ring-inset ring-white/10" />
+      </div>
+    );
+  }
+
   return (
     <div
       className={`relative rounded-full flex items-center justify-center shrink-0 bg-gradient-to-b from-[#1c2438] via-[#131a2b] to-[#0c101c] border border-indigo-400/25 shadow-[0_4px_16px_rgba(0,0,0,0.5)] ${sizeMap[size]} ${className}`}
     >
-      {/* Outer subtle glow ring for large avatar */}
-      {size === 'xl' && (
-        <div className="absolute -inset-1.5 rounded-full bg-gradient-to-b from-indigo-500/10 via-sky-500/5 to-transparent pointer-events-none blur-sm" />
-      )}
-
       <svg
         viewBox="0 0 64 64"
         fill="none"

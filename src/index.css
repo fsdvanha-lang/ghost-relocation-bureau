@@ -4,14 +4,14 @@
 
 @layer base {
   :root {
-    --bg-app: #090d16;
-    --bg-card: #101625;
-    --bg-card-hover: #141c2c;
-    --border-card: #1b253b;
-    --border-card-strong: #283754;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
+    --bg-app: #070b13;
+    --bg-card: #0e1424;
+    --bg-card-hover: #131c33;
+    --border-card: #162035;
+    --border-card-strong: #22304e;
+    --text-primary: #f1f5f9;
+    --text-secondary: #8a9bb5;
+    --text-muted: #576882;
 
     /* Motion System Tokens */
     --ease-out-cubic: cubic-bezier(0.22, 1, 0.36, 1);
@@ -23,8 +23,8 @@
   }
 
   body {
-    background-color: #090d16;
-    color: #f8fafc;
+    background-color: #070b13;
+    color: #f1f5f9;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
