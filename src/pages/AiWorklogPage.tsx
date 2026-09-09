@@ -100,7 +100,7 @@ export const AiWorklogPage: React.FC = () => {
       title: 'API Integration Pass: Open-Meteo Astronomy',
       category: 'API & Интеграции',
       humanAction: 'Поставил условие USEFUL > DECORATIVE: найти полезные внешние API без ключей. Утвердил вымышленную локацию Blackwood Sanctuary, лимит до 10 000 req/day и обязательную атрибуцию Open-Meteo.',
-      aiAction: 'Спроектировал изолированный модуль src/services/environment/ (adapter + service + config + types + localStorage TTL). Написал тесты изоляции, доказав независимость ядра от API.',
+      aiAction: 'Спроектировал изолированный модуль src/services/environment/ (adapter + service + config + types + localStorage TTL). Написал тесты изоляции, подтвердив независимость ядра от API.',
       result: 'Живой слой атмосферных данных (фазы Луны, сумерки, эфемериды) без внешних ключей, с надежным офлайн-фоллбэком при сетевых сбоях.'
     },
     {
@@ -175,7 +175,7 @@ export const AiWorklogPage: React.FC = () => {
               AI Worklog & Engineering Audit
             </h2>
             <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-white/[0.06] text-[#F3F3F0] border border-white/[0.12] font-semibold">
-              v2.5 production
+              v1.0.0 prototype
             </span>
           </div>
           <p className="text-xs text-[#7B7B78] mt-1">
@@ -265,37 +265,37 @@ export const AiWorklogPage: React.FC = () => {
 
           <div className="space-y-2.5 text-xs text-[#E8E6E1]">
             <div className="p-3 rounded-xl bg-[#09090c] border border-white/[0.06]">
-              <strong className="text-white block font-heading font-semibold text-xs mb-0.5">1. Запрет LLM в логике подбора</strong>
+              <strong className="text-white block font-heading font-semibold text-xs mb-0.5">1. Детерминированный скоринг без LLM</strong>
               <p className="text-[#9d9d99] leading-relaxed">
-                Оператор наложил строгое вето на генеративные вызовы в алгоритме: весь скоринг и проверка ограничений реализованы детерминированным кодом на TypeScript для воспроизводимости результатов.
+                Принято решение не использовать генеративные вызовы в критической логике подбора, чтобы результаты были воспроизводимыми, объяснимыми и проверяемыми unit-тестами.
               </p>
             </div>
 
             <div className="p-3 rounded-xl bg-[#09090c] border border-white/[0.06]">
-              <strong className="text-white block font-heading font-semibold text-xs mb-0.5">2. Дедлайн как приоритет, а не hard constraint</strong>
+              <strong className="text-white block font-heading font-semibold text-xs mb-0.5">2. Дедлайн как приоритет очереди, а не hard constraint</strong>
               <p className="text-[#9d9d99] leading-relaxed">
-                Истекший дедлайн не делает расселение невозможным, а напротив, ставит сущность во главу очереди вытеснения с наивысшим приоритетом.
+                Просроченный дедлайн не делает подходящую локацию физически невозможной для заселения. Он определяет порядок в очереди обработки и вытеснения, фокусируя внимание оператора на горящих заявках.
               </p>
             </div>
 
             <div className="p-3 rounded-xl bg-[#09090c] border border-white/[0.06]">
-              <strong className="text-white block font-heading font-semibold text-xs mb-0.5">3. Эстетический вектор Dark Luxury</strong>
+              <strong className="text-white block font-heading font-semibold text-xs mb-0.5">3. Разделение оверрайда условий и защиты вместимости</strong>
               <p className="text-[#9d9d99] leading-relaxed">
-                Выбор темной визуальной темы: минеральный фон `#08080a`, тонкие границы карточек, контрастная типографика и иллюстрации 16:9.
+                Оператор вправе подтвердить исключение по условиям среды после предупреждения, но превышение физической вместимости (capacity) локации строго запрещено и блокируется системой.
               </p>
             </div>
 
             <div className="p-3 rounded-xl bg-[#09090c] border border-white/[0.06]">
-              <strong className="text-white block font-heading font-semibold text-xs mb-0.5">4. Выбор Open-Meteo вместо NASA APOD</strong>
+              <strong className="text-white block font-heading font-semibold text-xs mb-0.5">4. Архитектурная изоляция внешнего API (Open-Meteo)</strong>
               <p className="text-[#9d9d99] leading-relaxed">
-                Принцип USEFUL &gt; DECORATIVE: внешнее API не должно ломать айдентику. Выбран стабильный сервис астрономии без ключей, с лимитом 10 000 req/day и локацией Blackwood Sanctuary.
+                Астрономические данные вынесены в изолированный ambient-слой с автономным фоллбэком. Сбои сети или лимиты внешнего сервиса не влияют на ядро подбора и работу оператора.
               </p>
             </div>
 
             <div className="p-3 rounded-xl bg-[#09090c] border border-white/[0.06]">
-              <strong className="text-white block font-heading font-semibold text-xs mb-0.5">5. Ликвидация кричащих плашек и навязчивого курсора</strong>
+              <strong className="text-white block font-heading font-semibold text-xs mb-0.5">5. Фокус на эргономике B2B SaaS вместо декоративных алертов</strong>
               <p className="text-[#9d9d99] leading-relaxed">
-                Оператор потребовал убрать гигантский зеленый алерт «Локация утверждена», шлейф курсора и лишние слои, вернув строгую эргономику Dark Luxury.
+                Интерфейс оптимизирован под рабочий процесс оператора: строгая типографика, фиксированный лейаут и контекстные действия вместо декоративных плашек и навязчивого курсора.
               </p>
             </div>
           </div>
@@ -312,7 +312,7 @@ export const AiWorklogPage: React.FC = () => {
             <div className="p-3 rounded-xl bg-[#09090c] border border-white/[0.06]">
               <strong className="text-white block font-heading font-semibold text-xs mb-0.5">1. Весовая формула вытеснения в allocation.ts</strong>
               <p className="text-[#9d9d99] leading-relaxed">
-                Вручную откалиброваны веса приоритета очереди (критичность дедлайна + уровень тревожности), чтобы истекающие заявки гарантированно получали свободный слот.
+                Вручную откалиброваны веса приоритета очереди (критичность дедлайна + уровень тревожности), чтобы истекающие заявки получали наивысший приоритет при наличии свободных слотов.
               </p>
             </div>
 
