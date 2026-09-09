@@ -1,12 +1,12 @@
 import React from 'react';
-import castleImg from '../../assets/locations/place-1-castle.png';
-import lighthouseImg from '../../assets/locations/place-2-lighthouse.png';
-import libraryImg from '../../assets/locations/place-3-library.png';
-import theaterImg from '../../assets/locations/place-4-theater.png';
-import basementImg from '../../assets/locations/place-5-basement.png';
-import cryptImg from '../../assets/locations/place-6-crypt.png';
-import observatoryImg from '../../assets/locations/place-7-observatory.png';
-import lakeMansionImg from '../../assets/locations/place-8-lake-mansion.png';
+import castleImg from '../../assets/locations/place-1-castle.jpg';
+import lighthouseImg from '../../assets/locations/place-2-lighthouse.jpg';
+import libraryImg from '../../assets/locations/place-3-library.jpg';
+import theaterImg from '../../assets/locations/place-4-theater.jpg';
+import basementImg from '../../assets/locations/place-5-basement.jpg';
+import cryptImg from '../../assets/locations/place-6-crypt.jpg';
+import observatoryImg from '../../assets/locations/place-7-observatory.jpg';
+import lakeMansionImg from '../../assets/locations/place-8-lake-mansion.jpg';
 
 interface PlaceThumbnailProps {
   placeType?: string;
@@ -60,14 +60,26 @@ export const PlaceThumbnail: React.FC<PlaceThumbnailProps> = ({
     }
   }
 
+  // Specific hover animation classes based on location personality (Requirement 9)
+  let hoverEffectClass = 'group-hover:scale-105';
+  if (placeId === 'place-2' || placeType.toLowerCase().includes('маяк')) {
+    hoverEffectClass = 'group-hover:brightness-125 group-hover:scale-105';
+  } else if (placeId === 'place-3' || placeType.toLowerCase().includes('библиотека')) {
+    hoverEffectClass = 'group-hover:contrast-115 group-hover:scale-103';
+  } else if (placeId === 'place-4' || placeType.toLowerCase().includes('театр')) {
+    hoverEffectClass = 'group-hover:brightness-110 group-hover:scale-105';
+  }
+
   return (
-    <div className={`relative overflow-hidden shrink-0 bg-[#0d1424] border border-[#1d2b45] shadow-md ${className}`}>
+    <div className={`group relative overflow-hidden shrink-0 bg-[#0d1424] border border-[#1d2b45] shadow-md transition-all duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] ${className}`}>
       <img
         src={imageSrc}
         alt={name || placeType || 'Локация'}
-        className="w-full h-full object-cover scale-105 filter contrast-105 brightness-100"
+        className={`w-full h-full object-cover scale-100 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${hoverEffectClass}`}
         loading="lazy"
       />
+      {/* Subtle sheen overlay on hover */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-40 group-hover:opacity-10 transition-opacity duration-220 pointer-events-none" />
     </div>
   );
 };

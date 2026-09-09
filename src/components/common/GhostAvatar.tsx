@@ -16,6 +16,7 @@ interface GhostAvatarProps {
   className?: string;
   ghostId?: string;
   usePhoto?: boolean;
+  isDrawer?: boolean;
 }
 
 const GHOST_PORTRAITS: Record<string, string> = {
@@ -35,6 +36,7 @@ export const GhostAvatar: React.FC<GhostAvatarProps> = ({
   size = 'md', 
   className = '',
   ghostId,
+  isDrawer = false,
   usePhoto: _usePhoto
 }) => {
   const sizeMap = {
@@ -48,16 +50,21 @@ export const GhostAvatar: React.FC<GhostAvatarProps> = ({
 
   return (
     <div
-      className={`relative rounded-full flex items-center justify-center shrink-0 overflow-hidden bg-[#090e1a] border border-indigo-400/35 shadow-[0_4px_16px_rgba(0,0,0,0.5)] ${sizeMap[size]} ${className}`}
+      className={`group relative rounded-full flex items-center justify-center shrink-0 overflow-hidden bg-[#090e1a] border border-indigo-400/35 shadow-[0_4px_16px_rgba(0,0,0,0.5)] transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-105 hover:-translate-y-px hover:shadow-[0_0_14px_rgba(99,102,241,0.35)] ${
+        isDrawer ? 'animate-drawer-avatar' : ''
+      } ${sizeMap[size]} ${className}`}
     >
       {/* Ambient subtle glow ring */}
       <div className="absolute -inset-1 rounded-full bg-gradient-to-b from-indigo-500/20 via-sky-500/10 to-transparent pointer-events-none blur-xs" />
       
+      {/* Subtle fog shimmer overlay on hover (Requirement 8) */}
+      <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-25 bg-gradient-to-t from-sky-400/30 to-transparent transition-opacity duration-200 pointer-events-none" />
+
       {/* Ghost portrait */}
       <img
         src={avatarImage}
         alt="Ghost avatar"
-        className="w-full h-full object-cover scale-105 filter contrast-110 brightness-105"
+        className="w-full h-full object-cover scale-105 filter contrast-110 brightness-105 transition-transform duration-200 group-hover:scale-110"
         loading="lazy"
       />
 

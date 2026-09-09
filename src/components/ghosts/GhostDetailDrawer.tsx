@@ -21,6 +21,7 @@ interface GhostDetailDrawerProps {
   hasPrev?: boolean;
   hasNext?: boolean;
   isDashboard?: boolean;
+  onInspectPlace?: (place: RelocationPlace) => void;
 }
 
 export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
@@ -35,8 +36,18 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
   onClose,
   onManualAssign,
   onUnassign,
+  onInspectPlace,
   isDashboard = false
 }) => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !ghost) return null;
 
   return (
@@ -47,10 +58,9 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
         onClick={onClose}
       />
 
-      {/* Slide-in Drawer Container */}
+      {/* Slide-in Drawer Container (Full height pinned drawer) */}
       <div 
-        className="fixed inset-y-0 right-0 z-50 w-full max-w-[420px] p-4 flex flex-col justify-center"
-        style={{ animation: 'drawerSlide 300ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
+        className="fixed inset-y-0 right-0 z-50 w-full max-w-[440px] h-full flex flex-col animate-drawer-slide shadow-2xl"
       >
         <GhostInspectorPanel
           ghost={ghost}
@@ -63,6 +73,7 @@ export const GhostDetailDrawer: React.FC<GhostDetailDrawerProps> = ({
           onClose={onClose}
           onManualAssign={onManualAssign}
           onUnassign={onUnassign}
+          onInspectPlace={onInspectPlace}
           isDocked={false}
         />
       </div>

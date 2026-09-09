@@ -49,28 +49,44 @@ export function allocateGhostsToPlaces(
 
   const ghostResults: Record<string, GhostMatchResult> = {};
 
-  // 1. Сначала учитываем ручные назначения (Manual Overrides имеют безусловный приоритет)
+  // 1. Сначала учитываем ручные назначения (Manual Overrides имеют безусловный приоритет при наличии слотов)
   const manualAssignedGhosts = ghosts.filter(g => g.manualOverride && g.assignedPlaceId);
   const unassignedOrAutoGhosts = ghosts.filter(g => !g.manualOverride || !g.assignedPlaceId);
 
   for (const ghost of manualAssignedGhosts) {
-    const placeId = ghost.assignedPlaceId!;
-    if (placeOccupants[placeId]) {
-      placeOccupants[placeId].push(ghost.id);
+    const placeId = ghost.assignedPlaceId;
+    if (!placeId) {
+      continue;
     }
-
+    const targetPlace = places.find(p => p.id === placeId);
     const evaluations: Record<string, PlaceMatchEvaluation> = {};
     for (const place of places) {
       evaluations[place.id] = evaluatePlaceForGhost(ghost, place);
     }
 
-    ghostResults[ghost.id] = {
-      ghostId: ghost.id,
-      recommendedPlaceId: placeId,
-      evaluations,
-      status: 'assigned_manual',
-      displacementReason: 'Назначено вручную оператором бюро'
-    };
+    if (targetPlace && placeOccupants[placeId]) {
+      if (placeOccupants[placeId].length < targetPlace.capacity) {
+        placeOccupants[placeId].push(ghost.id);
+        ghostResults[ghost.id] = {
+          ghostId: ghost.id,
+          recommendedPlaceId: placeId,
+          evaluations,
+          status: 'assigned_manual',
+          displacementReason: 'Назначено вручную оператором бюро'
+        };
+      } else {
+        // Локация полностью заполнена: ручное назначение не может превышать емкость
+        ghostResults[ghost.id] = {
+          ghostId: ghost.id,
+          recommendedPlaceId: null,
+          evaluations,
+          status: 'impossible',
+          impossibleReasons: [
+            `Локация «${targetPlace.name}» полностью заполнена (${targetPlace.capacity} из ${targetPlace.capacity} мест). Превышение вместимости запрещено.`
+          ]
+        };
+      }
+    }
   }
 
   // 2. Сортируем оставшиеся заявки по приоритету (дедлайн + тревожность)
@@ -95,19 +111,18 @@ export function allocateGhostsToPlaces(
       .sort((a, b) => b.evaluation.score - a.evaluation.score);
 
     if (eligiblePlaces.length === 0) {
-      // Ни одно место физически не подходит
-      const impossibleReasons: string[] = [];
-      if (ghost.specialRequirements.requiresAttic && ghost.specialRequirements.requiresCellar) {
-        impossibleReasons.push('Не существует локации с одновременным наличием чердака и подвала');
-      }
-      if (ghost.specialRequirements.isolatedFromHumans) {
-        impossibleReasons.push('Все локации без людей не удовлетворяют другим обязательным условиям');
-      }
-      if (ghost.specialRequirements.noMirrors) {
-        impossibleReasons.push('Все потенциально доступные локации оборудованы зеркалами');
-      }
-      if (impossibleReasons.length === 0) {
-        impossibleReasons.push('Отсутствует локация, удовлетворяющая обязательным условиям привидения');
+      // Ни одно место физически не удовлетворяет совокупности обязательных условий
+      const reqList: string[] = [];
+      if (ghost.specialRequirements.requiresAttic) reqList.push('чердак');
+      if (ghost.specialRequirements.requiresCellar) reqList.push('подвал');
+      if (ghost.specialRequirements.isolatedFromHumans) reqList.push('полная изоляция от людей');
+      if (ghost.specialRequirements.noMirrors) reqList.push('отсутствие зеркал');
+
+      const impossibleReasons: string[] = [
+        'Нет ни одной локации, которая одновременно удовлетворяет всем обязательным ограничениям.'
+      ];
+      if (reqList.length > 0) {
+        impossibleReasons.push(`Заявленный комплекс ограничений: ${reqList.join(', ')}.`);
       }
 
       ghostResults[ghost.id] = {
@@ -141,8 +156,7 @@ export function allocateGhostsToPlaces(
     }
 
     if (assignedPlaceId) {
-      const isCriticalUrgency = ghost.deadlineHoursLeft <= 24;
-      const status: GhostStatus = isCriticalUrgency ? 'needs_attention' : 'assigned_auto';
+      const status: GhostStatus = ghost.manualOverride ? 'assigned_manual' : 'assigned_auto';
 
       ghostResults[ghost.id] = {
         ghostId: ghost.id,

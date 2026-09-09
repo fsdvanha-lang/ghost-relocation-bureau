@@ -54,7 +54,10 @@ const AppContent: React.FC = () => {
 
   return (
     <AppLayout>
-      {renderCurrentView()}
+      {/* Page Navigation Transition (Requirement 19: 250ms subtle fade & translateY) */}
+      <div key={state.activeView} className="animate-page-transition">
+        {renderCurrentView()}
+      </div>
 
       {/* Global Ghost Inspection Drawer with Inspector Navigation */}
       <GhostDetailDrawer

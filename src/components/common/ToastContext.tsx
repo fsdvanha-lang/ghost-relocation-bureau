@@ -73,6 +73,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             <button
               onClick={() => removeToast(t.id)}
               className="p-1 text-slate-500 hover:text-slate-300 rounded transition-colors shrink-0"
+              aria-label="Закрыть уведомление"
             >
               <X className="w-3.5 h-3.5" />
             </button>

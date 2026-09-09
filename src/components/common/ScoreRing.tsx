@@ -25,13 +25,10 @@ export const ScoreRing: React.FC<ScoreRingProps> = ({
   className = '',
   animate = true
 }) => {
-  const [animatedScore, setAnimatedScore] = useState(animate ? 0 : score);
+  const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
-    if (!animate) {
-      setAnimatedScore(score);
-      return;
-    }
+    if (!animate) return;
 
     const startVal = 0;
     const diff = score - startVal;
@@ -55,9 +52,10 @@ export const ScoreRing: React.FC<ScoreRingProps> = ({
     return () => cancelAnimationFrame(id);
   }, [score, animate]);
 
+  const currentScore = animate ? animatedScore : score;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(100, Math.max(0, (animatedScore / maxScore) * 100));
+  const progress = Math.min(100, Math.max(0, (currentScore / maxScore) * 100));
   const offset = circumference - (progress / 100) * circumference;
 
   return (
@@ -73,7 +71,7 @@ export const ScoreRing: React.FC<ScoreRingProps> = ({
           r={radius}
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-slate-800/80"
+          className="text-white/[0.08]"
           fill="none"
         />
         {/* Progress bar with smooth ease-out offset */}
@@ -92,7 +90,7 @@ export const ScoreRing: React.FC<ScoreRingProps> = ({
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none">
         <span className="text-xs font-bold font-mono text-slate-100 leading-none">
-          {animatedScore}{unit && !showSubtext ? unit : ''}
+          {currentScore}{unit && !showSubtext ? unit : ''}
         </span>
         {showSubtext && (
           <span className="text-[9px] text-slate-400 font-mono leading-none mt-0.5">

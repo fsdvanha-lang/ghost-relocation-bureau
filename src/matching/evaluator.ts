@@ -104,6 +104,7 @@ export function evaluatePlaceForGhost(
   // Б) Освещение
   if (ghost.anxietyLevel === 'high' || ghost.specialRequirements.prefersDarkness) {
     if (place.lighting === 'very_low' || place.lighting === 'low') {
+      score += 10;
       pros.push({
         category: 'lighting',
         type: 'pro',
@@ -137,6 +138,7 @@ export function evaluatePlaceForGhost(
         deltaScore: -10
       });
     } else {
+      score += 5;
       pros.push({
         category: 'lighting',
         type: 'pro',
@@ -149,6 +151,7 @@ export function evaluatePlaceForGhost(
   // В) Уровень шума
   if (ghost.specialRequirements.prefersSilence || ghost.anxietyLevel === 'high') {
     if (place.noiseLevel === 'silent') {
+      score += 15;
       pros.push({
         category: 'noise',
         type: 'pro',
@@ -156,6 +159,7 @@ export function evaluatePlaceForGhost(
         deltaScore: 15
       });
     } else if (place.noiseLevel === 'low') {
+      score += 5;
       pros.push({
         category: 'noise',
         type: 'pro',
@@ -184,6 +188,7 @@ export function evaluatePlaceForGhost(
   // Г) Влажность
   if (ghost.specialRequirements.likesDampness) {
     if (place.humidity === 'high') {
+      score += 10;
       pros.push({
         category: 'humidity',
         type: 'pro',
@@ -212,6 +217,7 @@ export function evaluatePlaceForGhost(
   // Д) Люди (мягкое влияние, когда нет строгого запрета)
   if (!ghost.specialRequirements.isolatedFromHumans) {
     if (place.humanPresence === 'none') {
+      score += 10;
       pros.push({
         category: 'humans',
         type: 'pro',

@@ -21,7 +21,7 @@ export interface BureauStats {
   averageScore: number;
 }
 
-interface BureauState {
+export interface BureauState {
   ghosts: GhostApplication[];
   places: RelocationPlace[];
   allocation: AllocationState;
@@ -29,7 +29,7 @@ interface BureauState {
   selectedGhostId: string | null;
 }
 
-type BureauAction =
+export type BureauAction =
   | { type: 'SET_VIEW'; view: BureauState['activeView'] }
   | { type: 'SELECT_GHOST'; ghostId: string | null }
   | { type: 'ASSIGN_MANUAL'; ghostId: string; placeId: string; reason?: string }
@@ -37,21 +37,32 @@ type BureauAction =
   | { type: 'RUN_AUTO_ALLOCATION' }
   | { type: 'RESET_TO_SEED' };
 
-const STORAGE_KEY = 'mox_ghost_bureau_state_v1';
+export const STORAGE_KEY = 'mox_ghost_bureau_state_v2';
 
-function computeInitialAllocation(ghosts: GhostApplication[], places: RelocationPlace[]): AllocationState {
+export function computeInitialAllocation(ghosts: GhostApplication[], places: RelocationPlace[]): AllocationState {
   return allocateGhostsToPlaces(ghosts, places);
 }
 
-function bureauReducer(state: BureauState, action: BureauAction): BureauState {
+export function bureauReducer(state: BureauState, action: BureauAction): BureauState {
   switch (action.type) {
     case 'SET_VIEW':
-      return { ...state, activeView: action.view };
+      return { ...state, activeView: action.view, selectedGhostId: null };
 
     case 'SELECT_GHOST':
       return { ...state, selectedGhostId: action.ghostId };
 
     case 'ASSIGN_MANUAL': {
+      const targetPlace = state.places.find(p => p.id === action.placeId);
+      if (!targetPlace) return state;
+
+      // P0-1: manual assignment cannot exceed capacity
+      const currentOccupants = state.ghosts.filter(
+        g => g.id !== action.ghostId && g.assignedPlaceId === action.placeId
+      );
+      if (currentOccupants.length >= targetPlace.capacity) {
+        return state; // Capacity overflow strictly forbidden
+      }
+
       const updatedGhosts = state.ghosts.map(g => {
         if (g.id === action.ghostId) {
           return {
@@ -135,7 +146,7 @@ function bureauReducer(state: BureauState, action: BureauAction): BureauState {
         places: initialPlaces,
         allocation: newAllocation,
         activeView: state.activeView,
-        selectedGhostId: 'ghost-1'
+        selectedGhostId: null
       };
     }
 
@@ -144,7 +155,7 @@ function bureauReducer(state: BureauState, action: BureauAction): BureauState {
   }
 }
 
-interface BureauContextValue {
+export interface BureauContextValue {
   state: BureauState;
   dispatch: React.Dispatch<BureauAction>;
   stats: BureauStats;
@@ -154,18 +165,152 @@ interface BureauContextValue {
   assignManual: (ghostId: string, placeId: string, reason?: string) => void;
   unassignGhost: (ghostId: string) => void;
   runAutoAllocation: () => Promise<void>;
+  closeAllocationModal: () => void;
   resetToSeed: () => void;
   isAllocating: boolean;
   allocationStep: string | null;
+  allocationStageNumber: number;
   recentlyUpdatedGhostIds: string[];
   lastSyncTime: string;
 }
 
-const BureauContext = createContext<BureauContextValue | null>(null);
+const VALID_GHOST_ANXIETY = new Set<string>(['low', 'medium', 'high']);
+const VALID_GHOST_TEMPERATURE = new Set<string>(['freezing', 'cold', 'cool', 'moderate', 'warm']);
+const VALID_GHOST_STATUS = new Set<string>([
+  'new',
+  'matched',
+  'assigned_auto',
+  'assigned_manual',
+  'needs_attention',
+  'impossible'
+]);
+
+const VALID_PLACE_LIGHTING = new Set<string>(['very_low', 'low', 'medium', 'high']);
+const VALID_PLACE_NOISE = new Set<string>(['silent', 'low', 'medium', 'high']);
+const VALID_PLACE_HUMIDITY = new Set<string>(['low', 'medium', 'high']);
+const VALID_PLACE_HUMAN_PRESENCE = new Set<string>(['none', 'rare', 'sometimes', 'frequent', 'constant']);
+
+const SPECIAL_REQUIREMENT_BOOLEAN_KEYS = [
+  'isolatedFromHumans',
+  'requiresAttic',
+  'requiresCellar',
+  'noMirrors',
+  'prefersSilence',
+  'likesDampness',
+  'prefersDarkness'
+];
+
+/**
+ * P1-4: Строгая runtime-валидация сохраняемого состояния Bureau
+ * Проверяет не только typeof полей, но и допустимые enum/union значения.
+ * Проверяет, что все boolean-поля действительно boolean.
+ * При наличии невалидных, неизвестных или поврежденных данных возвращает null для безопасного отката к Seed.
+ */
+export function validateBureauStorage(raw: unknown): { ghosts: GhostApplication[]; places: RelocationPlace[] } | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const candidate = raw as Record<string, unknown>;
+
+  if (!Array.isArray(candidate.ghosts) || !Array.isArray(candidate.places)) {
+    return null;
+  }
+  if (candidate.ghosts.length === 0 || candidate.places.length === 0) {
+    return null;
+  }
+
+  const isGhostsValid = candidate.ghosts.every(item => {
+    if (!item || typeof item !== 'object') return false;
+    const g = item as Record<string, unknown>;
+
+    // 1. Примитивные и структурные проверки типов
+    if (
+      typeof g.id !== 'string' ||
+      typeof g.name !== 'string' ||
+      typeof g.anxietyLevel !== 'string' ||
+      typeof g.preferredTemperature !== 'string' ||
+      typeof g.deadlineHoursLeft !== 'number' ||
+      !g.specialRequirements ||
+      typeof g.specialRequirements !== 'object' ||
+      typeof g.status !== 'string' ||
+      (g.assignedPlaceId !== null && typeof g.assignedPlaceId !== 'string') ||
+      typeof g.manualOverride !== 'boolean' ||
+      (g.manualOverrideReason !== undefined && typeof g.manualOverrideReason !== 'string') ||
+      (g.bio !== undefined && typeof g.bio !== 'string')
+    ) {
+      return false;
+    }
+
+    // 2. Проверка допустимых значений enum/union
+    if (
+      !VALID_GHOST_ANXIETY.has(g.anxietyLevel) ||
+      !VALID_GHOST_TEMPERATURE.has(g.preferredTemperature) ||
+      !VALID_GHOST_STATUS.has(g.status)
+    ) {
+      return false;
+    }
+
+    // 3. Строгая валидация boolean-полей требований
+    const req = g.specialRequirements as Record<string, unknown>;
+    for (const key of SPECIAL_REQUIREMENT_BOOLEAN_KEYS) {
+      if (key in req && typeof req[key] !== 'boolean') {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  const isPlacesValid = candidate.places.every(item => {
+    if (!item || typeof item !== 'object') return false;
+    const p = item as Record<string, unknown>;
+
+    // 1. Примитивные и структурные проверки типов
+    if (
+      typeof p.id !== 'string' ||
+      typeof p.name !== 'string' ||
+      typeof p.type !== 'string' ||
+      typeof p.capacity !== 'number' ||
+      typeof p.lighting !== 'string' ||
+      typeof p.noiseLevel !== 'string' ||
+      typeof p.humidity !== 'string' ||
+      typeof p.humanPresence !== 'string' ||
+      typeof p.hasAttic !== 'boolean' ||
+      typeof p.hasCellar !== 'boolean' ||
+      typeof p.hasMirrors !== 'boolean' ||
+      (p.description !== undefined && typeof p.description !== 'string') ||
+      (p.tags !== undefined && (!Array.isArray(p.tags) || !p.tags.every(t => typeof t === 'string')))
+    ) {
+      return false;
+    }
+
+    // 2. Проверка допустимых значений enum/union
+    if (
+      !VALID_PLACE_LIGHTING.has(p.lighting) ||
+      !VALID_PLACE_NOISE.has(p.noiseLevel) ||
+      !VALID_PLACE_HUMIDITY.has(p.humidity) ||
+      !VALID_PLACE_HUMAN_PRESENCE.has(p.humanPresence)
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  if (isGhostsValid && isPlacesValid) {
+    return {
+      ghosts: candidate.ghosts as GhostApplication[],
+      places: candidate.places as RelocationPlace[]
+    };
+  }
+
+  return null;
+}
+
+export const BureauContext = createContext<BureauContextValue | null>(null);
 
 export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAllocating, setIsAllocating] = useState(false);
   const [allocationStep, setAllocationStep] = useState<string | null>(null);
+  const [allocationStageNumber, setAllocationStageNumber] = useState(1);
   const [recentlyUpdatedGhostIds, setRecentlyUpdatedGhostIds] = useState<string[]>([]);
   const [lastSyncTime, setLastSyncTime] = useState('только что');
 
@@ -174,19 +319,20 @@ export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.ghosts && parsed.places) {
-          const alloc = allocateGhostsToPlaces(parsed.ghosts, parsed.places);
+        const validated = validateBureauStorage(parsed);
+        if (validated) {
+          const alloc = allocateGhostsToPlaces(validated.ghosts, validated.places);
           return {
-            ghosts: parsed.ghosts,
-            places: parsed.places,
+            ghosts: validated.ghosts,
+            places: validated.places,
             allocation: alloc,
             activeView: 'dashboard' as const,
-            selectedGhostId: parsed.selectedGhostId || 'ghost-1'
+            selectedGhostId: null
           };
         }
       }
     } catch {
-      // Игнорируем ошибку чтения localStorage и используем seed
+      // Игнорируем ошибку чтения localStorage и безопасно используем seed
     }
 
     const alloc = computeInitialAllocation(INITIAL_GHOSTS, INITIAL_PLACES);
@@ -205,7 +351,7 @@ export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       places: INITIAL_PLACES,
       allocation: alloc,
       activeView: 'dashboard' as const,
-      selectedGhostId: 'ghost-1'
+      selectedGhostId: null
     };
   });
 
@@ -250,11 +396,15 @@ export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }
 
-      if (g.status === 'impossible') {
+      if (g.status === 'impossible' || (!g.assignedPlaceId && state.allocation.ghostResults[g.id]?.status === 'impossible')) {
         impossibleCount++;
       }
 
-      if (g.deadlineHoursLeft <= 24 || g.status === 'impossible' || g.status === 'needs_attention') {
+      // Заявка требует внимания, если:
+      // 1. Невозможно расселить (hard conflicts)
+      // 2. Или еще не расселена (!assignedPlaceId)
+      // 3. Или дедлайн просрочен / срочный (<= 24 ч.)
+      if (g.status === 'impossible' || !g.assignedPlaceId || g.deadlineHoursLeft <= 24) {
         needsAttentionCount++;
       }
     }
@@ -296,14 +446,14 @@ export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const assignManual = (ghostId: string, placeId: string, reason?: string) => {
     dispatch({ type: 'ASSIGN_MANUAL', ghostId, placeId, reason });
     setRecentlyUpdatedGhostIds([ghostId]);
-    setTimeout(() => setRecentlyUpdatedGhostIds([]), 1200);
+    setTimeout(() => setRecentlyUpdatedGhostIds([]), 800);
     setLastSyncTime('только что');
   };
 
   const unassignGhost = (ghostId: string) => {
     dispatch({ type: 'UNASSIGN_GHOST', ghostId });
     setRecentlyUpdatedGhostIds([ghostId]);
-    setTimeout(() => setRecentlyUpdatedGhostIds([]), 1200);
+    setTimeout(() => setRecentlyUpdatedGhostIds([]), 800);
     setLastSyncTime('только что');
   };
 
@@ -312,31 +462,71 @@ export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLastSyncTime('только что');
   };
 
-  // Multi-stage auto-allocation pipeline (~900ms total)
-  const runAutoAllocation = useCallback(async () => {
-    setIsAllocating(true);
-    setAllocationStep('Анализируем заявки...');
-
-    await new Promise(r => setTimeout(r, 260));
-    setAllocationStep('Проверяем ограничения...');
-
-    await new Promise(r => setTimeout(r, 300));
-    setAllocationStep('Распределяем места...');
-
-    await new Promise(r => setTimeout(r, 320));
-    dispatch({ type: 'RUN_AUTO_ALLOCATION' });
-    setAllocationStep('Готово · 9 из 10');
-
-    // Highlight all updated ghosts for subtle row glow
-    const allIds = state.ghosts.map(g => g.id);
-    setRecentlyUpdatedGhostIds(allIds);
-    setTimeout(() => setRecentlyUpdatedGhostIds([]), 1500);
-    setLastSyncTime('только что');
-
-    await new Promise(r => setTimeout(r, 650));
+  const closeAllocationModal = useCallback(() => {
     setIsAllocating(false);
     setAllocationStep(null);
-  }, [state.ghosts]);
+    setAllocationStageNumber(1);
+  }, []);
+
+  // Multi-stage auto-allocation pipeline (900-1400ms total, Requirement 5)
+  const runAutoAllocation = useCallback(async () => {
+    setIsAllocating(true);
+
+    // СТАДИЯ 1: Проверяем заявки (10)
+    setAllocationStageNumber(1);
+    setAllocationStep('Проверяем заявки (10 заявок)');
+    await new Promise(r => setTimeout(r, 260));
+
+    // СТАДИЯ 2: Hard constraints (10 / 10)
+    setAllocationStageNumber(2);
+    setAllocationStep('Hard constraints (10 / 10 проверено)');
+    await new Promise(r => setTimeout(r, 280));
+
+    // СТАДИЯ 3: Calculating compatibility
+    setAllocationStageNumber(3);
+    setAllocationStep('Calculating compatibility (скоринг 0–100)');
+    await new Promise(r => setTimeout(r, 290));
+
+    // СТАДИЯ 4: Matching places
+    setAllocationStageNumber(4);
+    setAllocationStep('Matching places (подбор лучших укрытий)');
+    await new Promise(r => setTimeout(r, 300));
+
+    // СТАДИЯ 5: Динамический результат распределения
+    const resetForAuto = state.ghosts.map(g => {
+      if (g.manualOverride) return g;
+      return { ...g, assignedPlaceId: null, status: 'new' as const };
+    });
+    const previewAllocation = allocateGhostsToPlaces(resetForAuto, state.places);
+    let previewRelocated = 0;
+    for (const g of resetForAuto) {
+      if (g.manualOverride || previewAllocation.ghostResults[g.id]?.recommendedPlaceId) {
+        previewRelocated++;
+      }
+    }
+    const previewImpossible = state.ghosts.length - previewRelocated;
+
+    setAllocationStageNumber(5);
+    setAllocationStep(`✓ Результат: ${previewRelocated} расселено · ${previewImpossible} невозможно`);
+    dispatch({ type: 'RUN_AUTO_ALLOCATION' });
+
+    // Highlight all updated ghosts for subtle row glow (700ms)
+    const allIds = state.ghosts.map(g => g.id);
+    setRecentlyUpdatedGhostIds(allIds);
+    setTimeout(() => setRecentlyUpdatedGhostIds([]), 800);
+    setLastSyncTime('только что');
+
+    // Auto-dismiss after 4.5s if not manually clicked
+    setTimeout(() => {
+      setIsAllocating(prev => {
+        if (prev) {
+          setAllocationStep(null);
+          setAllocationStageNumber(1);
+        }
+        return false;
+      });
+    }, 4500);
+  }, [state.ghosts, state.places]);
 
   return (
     <BureauContext.Provider
@@ -350,9 +540,11 @@ export const BureauProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         assignManual,
         unassignGhost,
         runAutoAllocation,
+        closeAllocationModal,
         resetToSeed,
         isAllocating,
         allocationStep,
+        allocationStageNumber,
         recentlyUpdatedGhostIds,
         lastSyncTime
       }}

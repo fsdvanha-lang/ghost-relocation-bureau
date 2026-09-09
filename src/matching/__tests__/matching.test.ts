@@ -231,4 +231,77 @@ describe('Ghost Relocation Scoring & Matching Engine', () => {
     expect(evalResult.hardConflicts.length).toBeGreaterThan(0);
     expect(evalResult.hardConflicts.some(c => c.category === 'humans')).toBe(true);
   });
+
+  // TEST 7: Точные тесты на бонусы (noise, humidity, lighting, human absence)
+  it('TEST 7: Exact scoring bonuses (noise, humidity, lighting, human absence) are added to score', () => {
+    // Base ghost with preferences that activate bonuses
+    const ghost: GhostApplication = {
+      id: 'g-bonus',
+      name: 'Бонусный призрак',
+      anxietyLevel: 'high',
+      preferredTemperature: 'cold',
+      deadlineHoursLeft: 48,
+      specialRequirements: {
+        prefersSilence: true,
+        likesDampness: true,
+        prefersDarkness: true,
+        isolatedFromHumans: false
+      },
+      status: 'new',
+      assignedPlaceId: null,
+      manualOverride: false
+    };
+
+    // Baseline place: tempDiff = 2 (-25), medium light (-10), medium noise (-15), dry/low humidity (-20), rare humans (0)
+    // Base score = 100 - 25 - 10 - 15 - 20 = 30
+    const baselinePlace: RelocationPlace = {
+      id: 'p-base',
+      name: 'Базовая локация',
+      type: 'Библиотека',
+      capacity: 5,
+      lighting: 'medium',
+      noiseLevel: 'medium',
+      humidity: 'low',
+      humanPresence: 'rare',
+      hasAttic: false,
+      hasCellar: false,
+      hasMirrors: false,
+      description: 'База'
+    };
+
+    const baseEval = evaluatePlaceForGhost(ghost, baselinePlace);
+    expect(baseEval.score).toBe(30);
+
+    // 1. Noise bonus: silent -> deltaScore = +15 (swings from -15 to +15: +30)
+    const silentPlace = { ...baselinePlace, noiseLevel: 'silent' as const };
+    const silentEval = evaluatePlaceForGhost(ghost, silentPlace);
+    const noisePro = silentEval.pros.find(p => p.category === 'noise');
+    expect(noisePro).toBeDefined();
+    expect(noisePro?.deltaScore).toBe(15);
+    expect(silentEval.score).toBe(baseEval.score + 15 - (-15)); // 60
+
+    // 2. Humidity bonus: high -> deltaScore = +10 (swings from -20 to +10: +30)
+    const dampPlace = { ...baselinePlace, humidity: 'high' as const };
+    const dampEval = evaluatePlaceForGhost(ghost, dampPlace);
+    const humidityPro = dampEval.pros.find(p => p.category === 'humidity');
+    expect(humidityPro).toBeDefined();
+    expect(humidityPro?.deltaScore).toBe(10);
+    expect(dampEval.score).toBe(baseEval.score + 10 - (-20)); // 60
+
+    // 3. Lighting bonus: very_low -> deltaScore = +10 (swings from -10 to +10: +20)
+    const darkPlace = { ...baselinePlace, lighting: 'very_low' as const };
+    const darkEval = evaluatePlaceForGhost(ghost, darkPlace);
+    const lightingPro = darkEval.pros.find(p => p.category === 'lighting');
+    expect(lightingPro).toBeDefined();
+    expect(lightingPro?.deltaScore).toBe(10);
+    expect(darkEval.score).toBe(baseEval.score + 10 - (-10)); // 50
+
+    // 4. Human absence bonus: none -> deltaScore = +10 (swings from 0 to +10: +10)
+    const emptyPlace = { ...baselinePlace, humanPresence: 'none' as const };
+    const emptyEval = evaluatePlaceForGhost(ghost, emptyPlace);
+    const humansPro = emptyEval.pros.find(p => p.category === 'humans');
+    expect(humansPro).toBeDefined();
+    expect(humansPro?.deltaScore).toBe(10);
+    expect(emptyEval.score).toBe(baseEval.score + 10); // 40
+  });
 });
